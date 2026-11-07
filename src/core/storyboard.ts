@@ -1,4 +1,4 @@
-import { createId, createScene, type AnimationScene, type Motion } from "./model";
+import { createId, createScene, type AnimationScene, type EnvironmentPreset, type Motion } from "./model";
 
 export interface StoryBeat {
   text: string;
@@ -29,6 +29,13 @@ function inferMotion(text: string): Motion {
   if (/\b(wave|waves|waving|hello|greet|greets|greeting|goodbye|bye)\b|يلوّح|يلوح|تلوح|تلوّح|يحيي|مرحبا|وداعا/.test(value)) return "wave";
   if (/\b(walk|walks|walking|walked|enter|enters|entering|leave|leaves|approach|approaches|step|steps|travel|travels)\b|يمشي|تمشي|المشي|مشى|يدخل|تدخل|يخرج|تخرج|يقترب|تقترب|يتقدم|تتقدم/.test(value)) return "walk";
   return "idle";
+}
+
+function inferEnvironment(text: string): EnvironmentPreset {
+  const value = text.toLocaleLowerCase();
+  if (/\b(night|neon|rainy|rain|street|city|urban|dark)\b|ليل|ليلاً|الشارع|مدينة|مطر|نيون/.test(value)) return "night";
+  if (/\b(forest|park|nature|garden|beach|mountain|trees|outdoors?)\b|غابة|حديقة|طبيعة|شاطئ|جبل|أشجار/.test(value)) return "nature";
+  return "studio";
 }
 
 function estimateDuration(text: string): number {
@@ -70,6 +77,7 @@ export function buildStoryboard(story: string): AnimationScene[] {
     const scene = createScene("Scene " + String(index + 1).padStart(2, "0"));
     scene.description = beat.text;
     scene.motion = beat.suggestedMotion;
+    scene.environment = inferEnvironment(beat.text);
     scene.durationSeconds = beat.durationSeconds;
     createCinematicCamera(scene, beat.text, index);
     addSuggestedSound(scene);
