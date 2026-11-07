@@ -6,7 +6,7 @@ import { ChevronRight, Download, Pause, Play, Plus, Save, Sparkles, Trash2, Uplo
 import Stickman from "./engine/Stickman";
 import CameraAnimator from "./engine/CameraAnimator";
 import { buildStoryboard } from "./core/storyboard";
-import { buildRenderSchedule, getRenderMimeType } from "./core/render";
+import { buildRenderSchedule, evaluateRenderFrame, getRenderMimeType } from "./core/render";
 import { createPoseKeyframe, evaluateCamera } from "./core/animation";
 import type { EvaluatedPose } from "./core/animation";
 import { createProject, createScene, isAnimationProject, type AnimationProject, type AnimationScene, type Motion } from "./core/model";
@@ -293,12 +293,13 @@ export default function App() {
           renderedSceneId = scene.id;
           previousSceneTime = -1 / 30;
         }
-        for (const cue of getCrossedSoundEvents(scene.sounds ?? [], previousSceneTime, frame.sceneTime)) playNaturalSound(cue.effect, cue.volume);
+        const frameState = evaluateRenderFrame(scene, frame, previousSceneTime);
+        for (const cue of frameState.soundEvents) playNaturalSound(cue.effect, cue.volume);
         previousSceneTime = frame.sceneTime;
         setPlaybackTime(frame.sceneTime);
         setPlayhead(frame.sceneTime);
         // Apply the camera synchronously: React state updates are not a reliable render clock.
-        const frameCamera = evaluateCamera(scene.cameraKeyframes ?? [], frame.sceneTime, scene.camera ?? { position: [4.8, 3.2, 6.2], target: [0, 1.1, 0], fov: 42 });
+        const frameCamera = frameState.camera;
         if (liveCameraRef.current) {
           liveCameraRef.current.position.set(...frameCamera.position);
           liveCameraRef.current.lookAt(...frameCamera.target);
@@ -313,7 +314,7 @@ export default function App() {
         })));
         compositeContext.clearRect(0, 0, compositeCanvas.width, compositeCanvas.height);
         compositeContext.drawImage(canvas, 0, 0, compositeCanvas.width, compositeCanvas.height);
-        const activeCues = (scene.subtitles ?? []).filter((cue) => frame.sceneTime >= cue.startSeconds && frame.sceneTime < cue.endSeconds);
+        const activeCues = frameState.activeSubtitles;
         if (activeCues.length) {
           const width = compositeCanvas.width;
           const height = compositeCanvas.height;
