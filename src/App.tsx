@@ -8,6 +8,7 @@ import { createPoseKeyframe } from "./core/animation";
 import type { EvaluatedPose } from "./core/animation";
 import { createProject, createScene, type AnimationProject, type AnimationScene, type Motion } from "./core/model";
 import { listProjects, saveProject as persistProject } from "./core/storage";
+import { getPlaybackTime, setPlaybackTime } from "./core/playback";
 
 const motions: Motion[] = ["idle", "walk", "run", "jump", "wave"];
 
@@ -40,14 +41,18 @@ export default function App() {
     if (!playing) return;
     let frame = 0;
     let previous = 0;
+    let lastUiUpdate = 0;
     const tick = (now: number) => {
       if (previous) {
         const delta = (now - previous) / 1000;
-        setPlayhead((time) => {
-          const duration = Math.max(0.1, activeScene?.durationSeconds ?? 4);
-          const next = time + delta;
-          return next >= duration ? next % duration : next;
-        });
+        const duration = Math.max(0.1, activeScene?.durationSeconds ?? 4);
+        const next = (getPlaybackTime() + delta) % duration;
+        setPlaybackTime(next);
+        // Keep the React editor responsive without re-rendering the whole UI at 60fps.
+        if (now - lastUiUpdate >= 50) {
+          setPlayhead(next);
+          lastUiUpdate = now;
+        }
       }
       previous = now;
       frame = window.requestAnimationFrame(tick);
@@ -58,6 +63,7 @@ export default function App() {
 
   useEffect(() => {
     setPlayhead(0);
+    setPlaybackTime(0);
     setSelectedKeyframeId(null);
     setKeyframeTime(0);
   }, [activeSceneId]);
@@ -132,6 +138,7 @@ export default function App() {
     updateScene({ keyframes: frames });
     setSelectedKeyframeId(frame.id);
     setPlayhead(keyframeTime);
+    setPlaybackTime(keyframeTime);
     setMessage("Keyframe added at " + keyframeTime.toFixed(1) + "s");
   }
 
@@ -142,6 +149,7 @@ export default function App() {
     updated.id = selectedKeyframeId;
     updateScene({ keyframes: [...frames, updated].sort((a, b) => a.atSeconds - b.atSeconds) });
     setPlayhead(keyframeTime);
+    setPlaybackTime(keyframeTime);
     setMessage("Selected keyframe updated");
   }
 
@@ -150,6 +158,7 @@ export default function App() {
     setSelectedKeyframeId(frame.id);
     setKeyframeTime(frame.atSeconds);
     setPlayhead(frame.atSeconds);
+    setPlaybackTime(frame.atSeconds);
     setKeyframeLeftArm(degrees(frame.leftArmRotation[2]));
     setKeyframeRightArm(degrees(frame.rightArmRotation[2]));
     setKeyframeLeftLeg(degrees(frame.leftLegRotation[0]));
@@ -213,7 +222,7 @@ export default function App() {
                   <directionalLight position={[4, 8, 5]} intensity={2.1} castShadow shadow-mapSize={[1024, 1024]}/>
                   <Grid position={[0, -0.03, 0]} args={[18, 18]} cellSize={0.5} cellColor="#343b52" sectionColor="#59627d" fadeDistance={20} infiniteGrid/>
                   <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.06, 0]} receiveShadow><planeGeometry args={[100, 100]}/><meshStandardMaterial color="#171c2b" roughness={0.95}/></mesh>
-                  <Stickman color={project.character.primaryColor} motion={activeScene?.motion ?? "idle"} playing={playing} timeSeconds={playhead} keyframes={activeScene?.keyframes ?? []}/>
+                  <Stickman color={project.character.primaryColor} motion={activeScene?.motion ?? "idle"} playing={playing} keyframes={activeScene?.keyframes ?? []}/>
                   <ContactShadows position={[0, -0.045, 0]} opacity={0.38} scale={5} blur={2.4} far={2}/>
                   <OrbitControls target={[0, 1.1, 0]} minDistance={3} maxDistance={12} maxPolarAngle={Math.PI / 2.02}/>
                 </Canvas>
@@ -235,7 +244,7 @@ export default function App() {
                   <label className="field-label">ROOT X <b>{keyframeRootX.toFixed(1)}</b></label><input aria-label="Root X position" className="duration-range" type="range" min="-2" max="2" step="0.1" value={keyframeRootX} onChange={(event) => setKeyframeRootX(Number(event.target.value))}/>
                   <label className="field-label">ROOT Y <b>{keyframeRootY.toFixed(1)}</b></label><input aria-label="Root Y position" className="duration-range" type="range" min="0" max="2" step="0.1" value={keyframeRootY} onChange={(event) => setKeyframeRootY(Number(event.target.value))}/>
                   <label className="field-label">ROOT Z <b>{keyframeRootZ.toFixed(1)}</b></label><input aria-label="Root Z position" className="duration-range" type="range" min="-2" max="2" step="0.1" value={keyframeRootZ} onChange={(event) => setKeyframeRootZ(Number(event.target.value))}/>
-                </div><div className="keyframe-actions"><button className="add-button" onClick={addKeyframe}><Plus size={14}/> Add</button><button className="add-button" onClick={updateKeyframe} disabled={!selectedKeyframeId}>Update</button><button className="delete-keyframe" onClick={removeKeyframe} disabled={!selectedKeyframeId}><Trash2 size={13}/> Delete</button></div><span>{activeScene?.keyframes?.length ?? 0} keyframes</span></div><div className="keyframe-list">{(activeScene?.keyframes ?? []).map((frame, index) => <button key={frame.id} className={selectedKeyframeId === frame.id ? "keyframe-chip selected" : "keyframe-chip"} onClick={() => selectKeyframe(frame)}>{String(index + 1).padStart(2, "0")} · {frame.atSeconds.toFixed(1)}s</button>)}</div><div className="playhead-control"><label className="field-label">PLAYHEAD <b>{playhead.toFixed(1)}s</b></label><input aria-label="Timeline playhead" className="duration-range" type="range" min="0" max={activeScene?.durationSeconds ?? 4} step="0.05" value={Math.min(playhead, activeScene?.durationSeconds ?? 4)} onChange={(event) => { setPlaying(false); setPlayhead(Number(event.target.value)); }}/><div className="timeline-foot"><span>{project.scenes.length} scenes</span><span>Natural sound effects only · {totalDuration} seconds</span></div></div>
+                </div><div className="keyframe-actions"><button className="add-button" onClick={addKeyframe}><Plus size={14}/> Add</button><button className="add-button" onClick={updateKeyframe} disabled={!selectedKeyframeId}>Update</button><button className="delete-keyframe" onClick={removeKeyframe} disabled={!selectedKeyframeId}><Trash2 size={13}/> Delete</button></div><span>{activeScene?.keyframes?.length ?? 0} keyframes</span></div><div className="keyframe-list">{(activeScene?.keyframes ?? []).map((frame, index) => <button key={frame.id} className={selectedKeyframeId === frame.id ? "keyframe-chip selected" : "keyframe-chip"} onClick={() => selectKeyframe(frame)}>{String(index + 1).padStart(2, "0")} · {frame.atSeconds.toFixed(1)}s</button>)}</div><div className="playhead-control"><label className="field-label">PLAYHEAD <b>{playhead.toFixed(1)}s</b></label><input aria-label="Timeline playhead" className="duration-range" type="range" min="0" max={activeScene?.durationSeconds ?? 4} step="0.05" value={Math.min(playhead, activeScene?.durationSeconds ?? 4)} onChange={(event) => { setPlaying(false); setPlayhead(Number(event.target.value)); setPlaybackTime(Number(event.target.value)); }}/><div className="timeline-foot"><span>{project.scenes.length} scenes</span><span>Natural sound effects only · {totalDuration} seconds</span></div></div>
             </div>
           </div>
 
