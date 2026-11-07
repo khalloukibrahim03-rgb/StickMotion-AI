@@ -335,7 +335,7 @@ export default function App() {
         anchor.download = safeTitle + ".webm";
         anchor.click();
         window.setTimeout(() => URL.revokeObjectURL(url), 30000);
-        setMessage("Video render exported as WebM · 30 FPS · silent viewport capture");
+        setMessage("Video exported as WebM · 30 FPS · timed subtitles and natural sound effects");
       } else {
         setMessage("Video render cancelled");
       }
