@@ -45,6 +45,8 @@ describe("prompt environment inference", () => {
   it("selects night and nature stages from scene descriptions", () => {
     const scenes = buildStoryboard("A stickman walks through a rainy neon street. Then it waves in a quiet forest.");
     expect(scenes.map((scene) => scene.environment)).toEqual(["night", "nature"]);
+    expect(scenes[0].sounds.some((cue) => cue.effect === "rain")).toBe(true);
+    expect(scenes[1].sounds.some((cue) => cue.effect === "wind")).toBe(true);
   });
 });
 
