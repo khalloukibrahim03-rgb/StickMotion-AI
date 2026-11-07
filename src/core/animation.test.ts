@@ -99,6 +99,17 @@ describe("procedural motion", () => {
     expect(end.bodyBounce).toBeCloseTo(0);
   });
 
+  it("makes surprise jumps take off once, land, and raise both arms", () => {
+    const start = evaluateProceduralMotion("jump", 0, 4);
+    const peak = evaluateProceduralMotion("jump", 2, 4);
+    const landing = evaluateProceduralMotion("jump", 4, 4);
+    expect(start.bodyBounce).toBe(0);
+    expect(peak.bodyBounce).toBeCloseTo(0.9);
+    expect(landing.bodyBounce).toBeCloseTo(0);
+    expect(peak.leftArmRotationZ).toBeGreaterThan(0);
+    expect(peak.waveArmRotation).toBeLessThan(0);
+  });
+
   it("clamps movement progress and protects against invalid timing", () => {
     expect(evaluateProceduralMotion("walk", 9, 3).rootPosition[0]).toBeCloseTo(0.9);
     expect(evaluateProceduralMotion("run", -1, 0).rootPosition[0]).toBeCloseTo(-2.2);
