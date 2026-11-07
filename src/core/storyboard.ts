@@ -45,9 +45,10 @@ function createCinematicCamera(scene: AnimationScene, text: string, index: numbe
   const distance = close ? 3.9 : wide ? 8.2 : 6.2;
   const start: [number, number, number] = [distance, height, distance * 0.82];
   const finish: [number, number, number] = [distance * 0.9, height * 1.04, distance * 0.9];
-  scene.camera = { position: start, target: [0, 1.05, 0], fov: close ? 34 : wide ? 48 : 42 };
+  const fov = close ? 34 : wide ? 48 : 42;
+  scene.camera = { position: start, target: [0, 1.05, 0], fov };
   scene.cameraKeyframes = [
-    { id: createId("camera"), atSeconds: 0, easing: "ease-in-out", position: start, target: [0, 1.05, 0], fov: scene.camera.fov },
+    { id: createId("camera"), atSeconds: 0, easing: "ease-in-out", position: start, target: [0, 1.05, 0], fov },
     { id: createId("camera"), atSeconds: scene.durationSeconds, easing: "ease-in-out", position: finish, target: [0, 1.05, 0], fov: scene.camera.fov },
   ];
 }
