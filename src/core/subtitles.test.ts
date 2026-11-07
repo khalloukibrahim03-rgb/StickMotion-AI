@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { serializeSubtitles } from "./subtitles";
+import { distributeSubtitlesAcrossScenes, parseSubtitleFile, serializeSubtitles } from "./subtitles";
 import type { AnimationScene } from "./model";
 
 const scene = (durationSeconds: number, subtitles: NonNullable<AnimationScene["subtitles"]>): Pick<AnimationScene, "durationSeconds" | "subtitles"> => ({
@@ -44,5 +44,49 @@ describe("subtitle serialization", () => {
   it("returns an empty string when there are no subtitles", () => {
     expect(serializeSubtitles([scene(4, [])], "srt")).toBe("");
     expect(serializeSubtitles([], "vtt")).toBe("");
+  });
+});
+
+
+describe("subtitle import", () => {
+  it("parses SRT captions and preserves text", () => {
+    const cues = parseSubtitleFile("1\\n00:00:00,500 --> 00:00:02,250\\nHello world\\n");
+    expect(cues).toHaveLength(1);
+    expect(cues[0].startSeconds).toBe(0.5);
+    expect(cues[0].endSeconds).toBe(2.25);
+    expect(cues[0].text).toBe("Hello world");
+  });
+
+  it("parses WebVTT Arabic captions and ignores cue settings", () => {
+    const cues = parseSubtitleFile("WEBVTT\\n\\n00:00:01.000 --> 00:00:03.500 align:start\\nمرحباً بالعالم\\n");
+    expect(cues).toHaveLength(1);
+    expect(cues[0].text).toBe("مرحباً بالعالم");
+    expect(cues[0].startSeconds).toBe(1);
+    expect(cues[0].endSeconds).toBe(3.5);
+  });
+
+  it("splits captions that cross scene boundaries", () => {
+    const first = {
+      id: "one", name: "One", description: "", durationSeconds: 3, motion: "idle" as const, environment: "studio" as const,
+      characterTransform: { position: [0,0,0] as [number,number,number], rotation: [0,0,0] as [number,number,number], scale: [1,1,1] as [number,number,number] },
+      sounds: [], subtitles: [],
+    };
+    const second = { ...first, id: "two", name: "Two", durationSeconds: 4 };
+    const cue = { id: "global", text: "Across scenes", startSeconds: 2.5, endSeconds: 3.5 };
+    const result = distributeSubtitlesAcrossScenes([first, second], [cue]);
+    expect(result.importedCount).toBe(2);
+    expect(result.scenes[0].subtitles?.[0]).toMatchObject({ text: "Across scenes", startSeconds: 2.5, endSeconds: 3 });
+    expect(result.scenes[1].subtitles?.[0]).toMatchObject({ text: "Across scenes", startSeconds: 0, endSeconds: 0.5 });
+  });
+
+  it("counts captions outside the project duration as skipped", () => {
+    const scene = {
+      id: "only", name: "Only", description: "", durationSeconds: 2, motion: "idle" as const, environment: "studio" as const,
+      characterTransform: { position: [0,0,0] as [number,number,number], rotation: [0,0,0] as [number,number,number], scale: [1,1,1] as [number,number,number] },
+      sounds: [], subtitles: [],
+    };
+    const result = distributeSubtitlesAcrossScenes([scene], [{ id: "late", text: "Late", startSeconds: 3, endSeconds: 4 }]);
+    expect(result.importedCount).toBe(0);
+    expect(result.skippedCount).toBe(1);
   });
 });
