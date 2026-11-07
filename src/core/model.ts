@@ -30,6 +30,12 @@ export interface PoseKeyframe {
   rightLegRotation: [number, number, number];
 }
 
+export interface CameraSettings {
+  position: [number, number, number];
+  target: [number, number, number];
+  fov: number;
+}
+
 export interface AnimationScene {
   id: string;
   name: string;
@@ -38,6 +44,7 @@ export interface AnimationScene {
   motion: Motion;
   environment: EnvironmentPreset;
   characterTransform: Transform3D;
+  camera: CameraSettings;
   sounds: SceneSound[];
   keyframes?: PoseKeyframe[];
 }
@@ -74,6 +81,7 @@ export function createScene(name = "New scene"): AnimationScene {
     durationSeconds: 4,
     motion: "idle",
     environment: "studio",
+    camera: { position: [4.8, 3.2, 6.2], target: [0, 1.1, 0], fov: 42 },
     characterTransform: {
       position: [0, 0, 0],
       rotation: [0, 0, 0],
@@ -153,6 +161,12 @@ function isAnimationScene(value: unknown): value is AnimationScene {
     && typeof value.description === "string"
     && motions.includes(value.motion as Motion)
     && environments.includes(value.environment as EnvironmentPreset)
+    && isRecord(value.camera)
+    && isVector3(value.camera.position)
+    && isVector3(value.camera.target)
+    && typeof value.camera.fov === "number"
+    && Number.isFinite(value.camera.fov)
+    && value.camera.fov >= 20 && value.camera.fov <= 80
     && isVector3(transform.position)
     && isVector3(transform.rotation)
     && isVector3(transform.scale)
