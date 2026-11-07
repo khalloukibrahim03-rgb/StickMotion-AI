@@ -81,6 +81,17 @@ function createCinematicCamera(scene: AnimationScene, text: string, index: numbe
 }
 
 function addSuggestedSound(scene: AnimationScene): void {
+  const description = scene.description.toLocaleLowerCase();
+  if (scene.environment === "night" && /\b(rain|rainy|storm|raining)\b|مطر|ممطر|عاصفة/.test(description)) {
+    for (let at = 0.1; at < scene.durationSeconds; at += 0.72) {
+      scene.sounds.push({ id: createId("sound"), effect: "rain", atSeconds: Number(at.toFixed(2)), volume: 0.28 });
+    }
+  } else if (scene.environment === "nature" && /\b(forest|park|trees|mountain|outdoors?)\b|غابة|حديقة|أشجار|جبل|طبيعة/.test(description)) {
+    for (let at = 0.2; at < scene.durationSeconds; at += 2.1) {
+      scene.sounds.push({ id: createId("sound"), effect: "wind", atSeconds: Number(at.toFixed(2)), volume: 0.24 });
+    }
+  }
+
   if (scene.motion === "walk" || scene.motion === "run") {
     const interval = scene.motion === "run" ? 0.32 : 0.62;
     for (let at = 0.15; at < scene.durationSeconds; at += interval) {
