@@ -38,7 +38,7 @@ function inferEnvironment(text: string): EnvironmentPreset {
   return "studio";
 }
 
-function inferSceneProps(text: string): SceneProp[] {
+function inferSceneProps(text: string, motion: Motion): SceneProp[] {
   const value = text.toLocaleLowerCase();
   const matches: Array<{ kind: SceneProp["kind"]; color: string; scale: [number, number, number] }> = [];
   if (/\b(box|crate|cube)\b|صندوق|مكعب/.test(value)) matches.push({ kind: "box", color: "#c58a52", scale: [1.05, 1.05, 1.05] });
@@ -52,7 +52,7 @@ function inferSceneProps(text: string): SceneProp[] {
   return matches.slice(0, 8).map((item, index) => ({
     id: createId("prop"),
     kind: item.kind,
-    position: [2.25 + (index % 3) * 0.75, item.kind === "sphere" ? 0.48 : item.kind === "cylinder" ? 0.75 : 0.52, -0.4 - Math.floor(index / 3) * 1.2],
+    position: [motion === "jump" ? 0.15 + (index % 3) * 0.55 : 2.25 + (index % 3) * 0.75, item.kind === "sphere" ? 0.48 : item.kind === "cylinder" ? 0.75 : 0.52, -0.4 - Math.floor(index / 3) * 1.2],
     scale: item.scale,
     color: item.color,
   }));
@@ -98,7 +98,7 @@ export function buildStoryboard(story: string): AnimationScene[] {
     scene.description = beat.text;
     scene.motion = beat.suggestedMotion;
     scene.environment = inferEnvironment(beat.text);
-    scene.props = inferSceneProps(beat.text);
+    scene.props = inferSceneProps(beat.text, beat.suggestedMotion);
     scene.durationSeconds = beat.durationSeconds;
     createCinematicCamera(scene, beat.text, index);
     addSuggestedSound(scene);
