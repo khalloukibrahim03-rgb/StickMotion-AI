@@ -1,4 +1,4 @@
-import { createId, createScene, type AnimationScene, type EnvironmentPreset, type Motion } from "./model";
+import { createId, createScene, type AnimationScene, type EnvironmentPreset, type Motion, type SceneProp } from "./model";
 
 export interface StoryBeat {
   text: string;
@@ -36,6 +36,26 @@ function inferEnvironment(text: string): EnvironmentPreset {
   if (/\b(night|neon|rainy|rain|street|city|urban|dark)\b|ليل|ليلاً|الشارع|مدينة|مطر|نيون/.test(value)) return "night";
   if (/\b(forest|park|nature|garden|beach|mountain|trees|outdoors?)\b|غابة|حديقة|طبيعة|شاطئ|جبل|أشجار/.test(value)) return "nature";
   return "studio";
+}
+
+function inferSceneProps(text: string): SceneProp[] {
+  const value = text.toLocaleLowerCase();
+  const matches: Array<{ kind: SceneProp["kind"]; color: string; scale: [number, number, number] }> = [];
+  if (/\b(box|crate|cube)\b|صندوق|مكعب/.test(value)) matches.push({ kind: "box", color: "#c58a52", scale: [1.05, 1.05, 1.05] });
+  if (/\b(ball|sphere)\b|كرة/.test(value)) matches.push({ kind: "sphere", color: "#f2b84b", scale: [0.82, 0.82, 0.82] });
+  if (/\b(table|desk)\b|طاولة|مكتب/.test(value)) matches.push({ kind: "table", color: "#9a6944", scale: [1, 1, 1] });
+  if (/\b(pillar|column|cylinder)\b|عمود|أسطوانة/.test(value)) matches.push({ kind: "cylinder", color: "#7b91a8", scale: [0.72, 1.5, 0.72] });
+  if (/\bdoor\b|باب/.test(value)) matches.push({ kind: "box", color: "#76533f", scale: [0.9, 2.5, 0.16] });
+  if (!matches.length && /\b(strange object|mysterious object|an object)\b|شيء غريب|جسم غريب/.test(value)) {
+    matches.push({ kind: "box", color: "#d4a84e", scale: [0.72, 0.72, 0.72] });
+  }
+  return matches.slice(0, 8).map((item, index) => ({
+    id: createId("prop"),
+    kind: item.kind,
+    position: [2.25 + (index % 3) * 0.75, item.kind === "sphere" ? 0.48 : item.kind === "cylinder" ? 0.75 : 0.52, -0.4 - Math.floor(index / 3) * 1.2],
+    scale: item.scale,
+    color: item.color,
+  }));
 }
 
 function estimateDuration(text: string): number {
@@ -78,6 +98,7 @@ export function buildStoryboard(story: string): AnimationScene[] {
     scene.description = beat.text;
     scene.motion = beat.suggestedMotion;
     scene.environment = inferEnvironment(beat.text);
+    scene.props = inferSceneProps(beat.text);
     scene.durationSeconds = beat.durationSeconds;
     createCinematicCamera(scene, beat.text, index);
     addSuggestedSound(scene);
