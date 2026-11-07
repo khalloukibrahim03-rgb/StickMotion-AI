@@ -5,6 +5,7 @@ import { ContactShadows, Grid, OrbitControls } from "@react-three/drei";
 import { ChevronRight, Download, Pause, Play, Plus, Save, Sparkles, Trash2, Upload, Volume2 } from "lucide-react";
 import Stickman from "./engine/Stickman";
 import CameraAnimator from "./engine/CameraAnimator";
+import EnvironmentStage from "./engine/EnvironmentStage";
 import { buildStoryboard } from "./core/storyboard";
 import { buildRenderSchedule, evaluateRenderFrame, getRenderMimeType } from "./core/render";
 import { createPoseKeyframe, evaluateCamera } from "./core/animation";
@@ -573,11 +574,11 @@ export default function App() {
               <div className="viewport-top"><span>3D VIEWPORT <i/> LIVE PREVIEW</span><span>Perspective · Orbit to inspect</span></div>
               <div className="viewport">
                 <Canvas shadows gl={{ preserveDrawingBuffer: true }} camera={{ position: cameraSettings.position, fov: cameraSettings.fov }} onCreated={({ camera }) => { if (camera instanceof THREE.PerspectiveCamera) liveCameraRef.current = camera; }}>
-                  <color attach="background" args={["#111522"]}/>
-                  <ambientLight intensity={0.75}/>
-                  <directionalLight position={[4, 8, 5]} intensity={2.1} castShadow shadow-mapSize={[1024, 1024]}/>
-                  <Grid position={[0, -0.03, 0]} args={[18, 18]} cellSize={0.5} cellColor="#343b52" sectionColor="#59627d" fadeDistance={20} infiniteGrid/>
-                  <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.06, 0]} receiveShadow><planeGeometry args={[100, 100]}/><meshStandardMaterial color="#171c2b" roughness={0.95}/></mesh>
+                  <EnvironmentStage environment={activeScene?.environment ?? "studio"}/>
+                  <ambientLight intensity={activeScene?.environment === "night" ? 0.48 : activeScene?.environment === "nature" ? 0.88 : 0.75}/>
+                  <directionalLight position={[4, 8, 5]} color={activeScene?.environment === "night" ? "#aab8ff" : activeScene?.environment === "nature" ? "#fff0cf" : "#ffffff"} intensity={activeScene?.environment === "night" ? 1.25 : 2.1} castShadow shadow-mapSize={[1024, 1024]}/>
+                  {activeScene?.environment === "studio" && <Grid position={[0, -0.03, 0]} args={[18, 18]} cellSize={0.5} cellColor="#343b52" sectionColor="#59627d" fadeDistance={20} infiniteGrid/>}
+                  <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.06, 0]} receiveShadow><planeGeometry args={[100, 100]}/><meshStandardMaterial color={activeScene?.environment === "nature" ? "#385a3b" : activeScene?.environment === "night" ? "#0c1022" : "#171c2b"} roughness={0.95}/></mesh>
                   <Stickman color={project.character.primaryColor} motion={activeScene?.motion ?? "idle"} durationSeconds={activeScene?.durationSeconds ?? 4} keyframes={activeScene?.keyframes ?? []} transform={activeScene?.characterTransform}/>
                   <ContactShadows position={[0, -0.045, 0]} opacity={0.38} scale={5} blur={2.4} far={2}/>
                   <CameraAnimator settings={cameraSettings} animate={playing && !rendering && Boolean(activeScene?.cameraKeyframes?.length)} sceneId={activeSceneId}/><OrbitControls ref={(controls) => { orbitControlsRef.current = controls as unknown as { target: THREE.Vector3 } | null; }} enabled={!rendering && !(playing && Boolean(activeScene?.cameraKeyframes?.length))} target={cameraSettings.target} minDistance={3} maxDistance={12} maxPolarAngle={Math.PI / 2.02}/>
