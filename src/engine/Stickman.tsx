@@ -29,6 +29,13 @@ export default function Stickman({ color, motion, playing, timeSeconds, keyframe
       rightLeg.current?.rotation.set(...pose.rightLegRotation);
       return;
     }
+    // Clear the previous keyed pose before evaluating procedural motion.
+    // This prevents stale root offsets and joint rotations after keyframes are removed.
+    root.current?.position.set(0, 0, 0);
+    leftArm.current?.rotation.set(0, 0, 0);
+    rightArm.current?.rotation.set(0, 0, 0);
+    leftLeg.current?.rotation.set(0, 0, 0);
+    rightLeg.current?.rotation.set(0, 0, 0);
     if (!playing) return;
     const t = timeSeconds;
     const stride = motion === "run" ? 9 : 5;
