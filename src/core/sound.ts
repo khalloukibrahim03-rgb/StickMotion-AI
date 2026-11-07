@@ -131,6 +131,6 @@ export const soundEffectLabels: Record<SoundEffect, string> = {
 /** Select cues crossed by a playback tick without firing them during backward scrubbing. */
 export function getCrossedSoundEvents(sounds: SceneSound[], fromSeconds: number, toSeconds: number): SceneSound[] {
   if (toSeconds < fromSeconds) return [];
-  return sounds.filter((cue) => cue.atSeconds > fromSeconds && cue.atSeconds <= toSeconds)
+  return sounds.filter((cue) => (cue.atSeconds > fromSeconds || (fromSeconds === 0 && cue.atSeconds === 0)) && cue.atSeconds <= toSeconds)
     .sort((a, b) => a.atSeconds - b.atSeconds);
 }
