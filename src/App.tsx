@@ -6,6 +6,7 @@ import { ChevronRight, Download, Pause, Play, Plus, Save, Sparkles, Trash2, Uplo
 import Stickman from "./engine/Stickman";
 import CameraAnimator from "./engine/CameraAnimator";
 import { buildStoryboard } from "./core/storyboard";
+import { buildRenderSchedule, getRenderMimeType } from "./core/render";
 import { createPoseKeyframe, evaluateCamera } from "./core/animation";
 import type { EvaluatedPose } from "./core/animation";
 import { createProject, createScene, isAnimationProject, type AnimationProject, type AnimationScene, type Motion } from "./core/model";
@@ -43,6 +44,9 @@ export default function App() {
   const [saved, setSaved] = useState(false);
   const [message, setMessage] = useState("Local workspace ready");
   const [recentProjects, setRecentProjects] = useState<AnimationProject[]>([]);
+  const [rendering, setRendering] = useState(false);
+  const [renderProgress, setRenderProgress] = useState(0);
+  const renderCancelRef = useRef(false);
 
   const activeScene = project.scenes.find((scene) => scene.id === activeSceneId) ?? project.scenes[0];
   const cameraSettings = useMemo(() => evaluateCamera(activeScene?.cameraKeyframes ?? [], playhead, activeScene?.camera ?? { position: [4.8, 3.2, 6.2], target: [0, 1.1, 0], fov: 42 }), [activeScene, playhead]);
@@ -212,6 +216,89 @@ export default function App() {
     updateProject({ scenes });
     setActiveSceneId(scenes[0].id);
     setMessage("Created " + scenes.length + " editable scenes using the offline story planner");
+  }
+
+  async function renderVideo() {
+    if (rendering) return;
+    const canvas = document.querySelector<HTMLCanvasElement>(".viewport canvas");
+    const mimeType = getRenderMimeType();
+    if (!canvas || typeof canvas.captureStream !== "function" || !mimeType) {
+      setMessage("Video recording is not supported by this browser");
+      return;
+    }
+    const schedule = buildRenderSchedule(project.scenes, 30);
+    if (!schedule.length) {
+      setMessage("Add at least one scene before rendering");
+      return;
+    }
+    if (schedule.length > 30 * 90) {
+      setMessage("This browser renderer is limited to 90 seconds per export");
+      return;
+    }
+
+    const previousSceneId = activeSceneId;
+    const previousTime = playhead;
+    const wasPlaying = playing;
+    const chunks: BlobPart[] = [];
+    let stream: MediaStream | null = null;
+    let recorder: MediaRecorder | null = null;
+    renderCancelRef.current = false;
+    setRendering(true);
+    setRenderProgress(0);
+    setPlaying(false);
+    try {
+      stream = canvas.captureStream(30);
+      recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
+      recorder.ondataavailable = (event) => { if (event.data.size > 0) chunks.push(event.data); };
+      const stopped = new Promise<void>((resolve, reject) => {
+        if (!recorder) return reject(new Error("Recorder could not start"));
+        recorder.onerror = () => reject(new Error("Browser video recording failed"));
+        recorder.onstop = () => resolve();
+      });
+      recorder.start(500);
+      for (let index = 0; index < schedule.length; index += 1) {
+        if (renderCancelRef.current) break;
+        const frame = schedule[index];
+        const scene = project.scenes[frame.sceneIndex];
+        if (scene.id !== activeSceneId) setActiveSceneId(scene.id);
+        setPlaybackTime(frame.sceneTime);
+        setPlayhead(frame.sceneTime);
+        // Give React Three Fiber a paint opportunity before capturing the next frame.
+        await new Promise<void>((resolve) => window.setTimeout(resolve, 1000 / 30));
+        if (index % 5 === 0 || index === schedule.length - 1) {
+          setRenderProgress(Math.round(((index + 1) / schedule.length) * 100));
+        }
+      }
+      recorder.stop();
+      await stopped;
+      if (!renderCancelRef.current && chunks.length) {
+        const blob = new Blob(chunks, { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        const safeTitle = project.title.trim().replace(/[^a-z0-9-_]+/gi, "-") || "stickmotion-video";
+        anchor.href = url;
+        anchor.download = safeTitle + ".webm";
+        anchor.click();
+        window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+        setMessage("Video render exported as WebM · 30 FPS · silent viewport capture");
+      } else {
+        setMessage("Video render cancelled");
+      }
+    } catch (error) {
+      if (recorder && recorder.state !== "inactive") recorder.stop();
+      setMessage(error instanceof Error ? error.message : "Video render failed");
+    } finally {
+      stream?.getTracks().forEach((track) => track.stop());
+      setActiveSceneId(previousSceneId);
+      setPlaybackTime(previousTime);
+      setPlayhead(previousTime);
+      setPlaying(wasPlaying);
+      setRendering(false);
+    }
+  }
+
+  function cancelRender() {
+    renderCancelRef.current = true;
   }
 
   async function save() {
@@ -390,7 +477,7 @@ export default function App() {
       <main className="main-area">
         <header className="topbar">
           <div className="crumbs">Workspace <ChevronRight size={14}/> <strong>Animation studio</strong><span className={saved ? "save-state" : "save-state unsaved"}>{saved ? "Saved" : "Unsaved"}</span></div>
-          <div className="top-actions"><input ref={importInput} className="file-input-hidden" type="file" accept=".json,application/json" aria-label="Import StickMotion project" onChange={(event) => void importProject(event.target.files?.[0])}/><button className="save-button transfer-button" onClick={() => importInput.current?.click()}><Upload size={14}/> Import JSON</button><button className="save-button transfer-button" onClick={exportProject}><Download size={14}/> Export JSON</button><button className="save-button" onClick={() => void save()}><Save size={15}/> Save project</button></div>
+          <div className="top-actions"><button className="save-button render-button" disabled={rendering} onClick={() => void renderVideo()}><Download size={14}/>{rendering ? "Rendering " + renderProgress + "%" : "Render video"}</button>{rendering && <button className="save-button cancel-render-button" onClick={cancelRender}>Cancel</button>}<input ref={importInput} className="file-input-hidden" type="file" accept=".json,application/json" aria-label="Import StickMotion project" onChange={(event) => void importProject(event.target.files?.[0])}/><button className="save-button transfer-button" onClick={() => importInput.current?.click()}><Upload size={14}/> Import JSON</button><button className="save-button transfer-button" onClick={exportProject}><Download size={14}/> Export JSON</button><button className="save-button" onClick={() => void save()}><Save size={15}/> Save project</button></div>
         </header>
 
         <section className="workspace">
