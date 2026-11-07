@@ -4,7 +4,7 @@ A free-first, browser-based 3D stickman animation studio. The product is being b
 
 ## Current development branch
 
-The `development` branch is the active engineering branch. The initial prototype exists locally, while the first shared core modules are now being added here.
+The `development` branch is the active engineering branch. The active editor shell, procedural 3D character, canonical project model, offline storyboard planner, IndexedDB persistence layer, and CI workflow are now committed here.
 
 ### Shared core modules
 
@@ -42,6 +42,10 @@ Production checks:
 npm run typecheck
 npm run build
 ```
+
+## Validation status
+
+GitHub Actions is configured to install dependencies, run TypeScript checks, and create a production build on pushes and pull requests. A successful run has not yet been confirmed. Local dependency installation and GitHub cloning were blocked by network/DNS restrictions in the current execution environment.
 
 ## Current limitations
 
