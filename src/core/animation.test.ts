@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createPoseKeyframe, evaluateCamera, evaluatePose } from "./animation";
+import { createPoseKeyframe, evaluateCamera, evaluatePose, evaluateProceduralMotion } from "./animation";
 
 describe("pose keyframe interpolation", () => {
   it("returns the first pose before the first keyframe", () => {
@@ -67,4 +67,29 @@ describe("camera keyframe interpolation", () => {
   it("interpolates camera position, target and field of view", () => { expect(evaluateCamera(track, 1, base)).toEqual({position:[1,1,6],target:[0,0.5,0],fov:50}); });
   it("uses endpoint keyframes outside the keyed interval", () => { expect(evaluateCamera(track, -1, base).fov).toBe(40); expect(evaluateCamera(track, 3, base).fov).toBe(60); });
   it("returns the base camera when no keyframes exist", () => { expect(evaluateCamera([], 1, base)).toEqual(base); });
+});
+
+
+describe("procedural motion", () => {
+  it("moves walking and running characters through the scene over its duration", () => {
+    const walkStart = evaluateProceduralMotion("walk", 0, 4);
+    const walkMiddle = evaluateProceduralMotion("walk", 2, 4);
+    const walkEnd = evaluateProceduralMotion("walk", 4, 4);
+    expect(walkStart.rootPosition[0]).toBeCloseTo(-0.9);
+    expect(walkMiddle.rootPosition[0]).toBeCloseTo(0);
+    expect(walkEnd.rootPosition[0]).toBeCloseTo(0.9);
+    expect(evaluateProceduralMotion("run", 0, 2).rootPosition[0]).toBeCloseTo(-2.2);
+    expect(evaluateProceduralMotion("run", 2, 2).rootPosition[0]).toBeCloseTo(2.2);
+  });
+
+  it("keeps non-travelling actions centered and produces their expected gestures", () => {
+    expect(evaluateProceduralMotion("idle", 1, 4).rootPosition[0]).toBe(0);
+    expect(evaluateProceduralMotion("wave", 1, 4).waveArmRotation).not.toBe(0);
+    expect(evaluateProceduralMotion("jump", 0.5, 4).bodyBounce).toBeGreaterThan(0);
+  });
+
+  it("clamps movement progress and protects against invalid timing", () => {
+    expect(evaluateProceduralMotion("walk", 9, 3).rootPosition[0]).toBeCloseTo(0.9);
+    expect(evaluateProceduralMotion("run", -1, 0).rootPosition[0]).toBeCloseTo(-2.2);
+  });
 });
