@@ -158,7 +158,7 @@ function isAnimationScene(value: unknown): value is AnimationScene {
     && isVector3(transform.scale)
     && Array.isArray(value.sounds)
     && value.sounds.every((sound) => isSceneSound(sound, duration))
-    && (value.keyframes === undefined || (Array.isArray(value.keyframes) && value.keyframes.every((frame) => isPoseKeyframe(frame, duration)));
+    && (value.keyframes === undefined || (Array.isArray(value.keyframes) && value.keyframes.every((frame) => isPoseKeyframe(frame, duration))));
 }
 
 export function isAnimationProject(value: unknown): value is AnimationProject {
