@@ -12,7 +12,7 @@ function Bone({ length, radius, color }: { length: number; radius: number; color
   </mesh>;
 }
 
-export default function Stickman({ color, motion, playing, durationSeconds, keyframes = [] }: { color: string; motion: Motion; playing: boolean; durationSeconds: number; keyframes?: PoseKeyframe[] }) {
+export default function Stickman({ color, motion, durationSeconds, keyframes = [] }: { color: string; motion: Motion; durationSeconds: number; keyframes?: PoseKeyframe[] }) {
   const root = useRef<THREE.Group>(null);
   const leftArm = useRef<THREE.Group>(null);
   const rightArm = useRef<THREE.Group>(null);
@@ -37,7 +37,6 @@ export default function Stickman({ color, motion, playing, durationSeconds, keyf
     rightArm.current?.rotation.set(0, 0, 0);
     leftLeg.current?.rotation.set(0, 0, 0);
     rightLeg.current?.rotation.set(0, 0, 0);
-    if (!playing) return;
     const t = getPlaybackTime();
     const pose = evaluateProceduralMotion(motion, t, durationSeconds);
     root.current?.position.set(...pose.rootPosition);
