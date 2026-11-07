@@ -11,7 +11,7 @@ function Bone({ length, radius, color }: { length: number; radius: number; color
   </mesh>;
 }
 
-export default function Stickman({ color, motion, playing, keyframes = [] }: { color: string; motion: Motion; playing: boolean; keyframes?: PoseKeyframe[] }) {
+export default function Stickman({ color, motion, playing, timeSeconds, keyframes = [] }: { color: string; motion: Motion; playing: boolean; timeSeconds: number; keyframes?: PoseKeyframe[] }) {
   const root = useRef<THREE.Group>(null);
   const leftArm = useRef<THREE.Group>(null);
   const rightArm = useRef<THREE.Group>(null);
@@ -19,12 +19,9 @@ export default function Stickman({ color, motion, playing, keyframes = [] }: { c
   const rightLeg = useRef<THREE.Group>(null);
   const body = "#e9eaf2";
 
-  useFrame(({ clock }, delta) => {
-    if (!playing) return;
-    const t = clock.getElapsedTime();
+  useFrame((_, delta) => {
     if (keyframes.length > 0) {
-      const duration = Math.max(0.01, keyframes[keyframes.length - 1].atSeconds);
-      const pose = evaluatePose(keyframes, clock.getElapsedTime() % duration);
+      const pose = evaluatePose(keyframes, timeSeconds);
       root.current?.position.set(...pose.rootPosition);
       leftArm.current?.rotation.set(...pose.leftArmRotation);
       rightArm.current?.rotation.set(...pose.rightArmRotation);
@@ -32,6 +29,8 @@ export default function Stickman({ color, motion, playing, keyframes = [] }: { c
       rightLeg.current?.rotation.set(...pose.rightLegRotation);
       return;
     }
+    if (!playing) return;
+    const t = timeSeconds;
     const stride = motion === "run" ? 9 : 5;
     const swing = motion === "run" ? 0.95 : motion === "walk" ? 0.58 : 0.04;
     if (root.current) {
