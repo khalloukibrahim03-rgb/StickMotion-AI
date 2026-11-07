@@ -25,6 +25,8 @@ export default function App() {
   const importInput = useRef<HTMLInputElement>(null);
   const subtitleImportInput = useRef<HTMLInputElement>(null);
   const liveCameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const liveRendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const liveSceneRef = useRef<THREE.Scene | null>(null);
   const orbitControlsRef = useRef<{ target: THREE.Vector3 } | null>(null);
   const [activeSceneId, setActiveSceneId] = useState(project.scenes[0].id);
   const [subtitleDraft, setSubtitleDraft] = useState("");
@@ -314,6 +316,11 @@ export default function App() {
           liveCameraRef.current.updateProjectionMatrix();
         }
         orbitControlsRef.current?.target.set(...frameCamera.target);
+        // Render synchronously after the exact camera is applied; otherwise the copied
+        // WebGL canvas can still contain the previous camera frame.
+        if (liveRendererRef.current && liveSceneRef.current && liveCameraRef.current) {
+          liveRendererRef.current.render(liveSceneRef.current, liveCameraRef.current);
+        }
         compositeContext.clearRect(0, 0, compositeCanvas.width, compositeCanvas.height);
         compositeContext.drawImage(canvas, 0, 0, compositeCanvas.width, compositeCanvas.height);
         const activeCues = frameState.activeSubtitles;
@@ -574,7 +581,7 @@ export default function App() {
             <div className="viewport-card">
               <div className="viewport-top"><span>3D VIEWPORT <i/> LIVE PREVIEW</span><span>Perspective · Orbit to inspect</span></div>
               <div className="viewport">
-                <Canvas shadows gl={{ preserveDrawingBuffer: true }} camera={{ position: cameraSettings.position, fov: cameraSettings.fov }} onCreated={({ camera }) => { if (camera instanceof THREE.PerspectiveCamera) liveCameraRef.current = camera; }}>
+                <Canvas shadows gl={{ preserveDrawingBuffer: true }} camera={{ position: cameraSettings.position, fov: cameraSettings.fov }} onCreated={({ camera, gl, scene }) => { if (camera instanceof THREE.PerspectiveCamera) liveCameraRef.current = camera; liveRendererRef.current = gl; liveSceneRef.current = scene; }}>
                   <EnvironmentStage environment={activeScene?.environment ?? "studio"}/>
                   <SceneProps props={activeScene?.props ?? []}/>
                   <ambientLight intensity={activeScene?.environment === "night" ? 0.48 : activeScene?.environment === "nature" ? 0.88 : 0.75}/>
