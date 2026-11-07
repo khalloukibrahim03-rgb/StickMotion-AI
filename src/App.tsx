@@ -53,6 +53,8 @@ export default function App() {
 
   useEffect(() => {
     setPlayhead(0);
+    setSelectedKeyframeId(null);
+    setKeyframeTime(0);
   }, [activeSceneId]);
 
   useEffect(() => {
