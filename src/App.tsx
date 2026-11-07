@@ -308,7 +308,6 @@ export default function App() {
         await new Promise<void>((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve())));
         compositeContext.clearRect(0, 0, compositeCanvas.width, compositeCanvas.height);
         compositeContext.drawImage(canvas, 0, 0, compositeCanvas.width, compositeCanvas.height);
-        manualVideoTrack?.requestFrame();
         const activeCues = (scene.subtitles ?? []).filter((cue) => frame.sceneTime >= cue.startSeconds && frame.sceneTime < cue.endSeconds);
         if (activeCues.length) {
           const width = compositeCanvas.width;
@@ -343,6 +342,8 @@ export default function App() {
             lines.forEach((item, lineIndex) => compositeContext.fillText(item, width / 2, centerY - ((lines.length - 1) * lineHeight) / 2 + lineIndex * lineHeight, width * 0.84));
           }
         }
+        // Request the frame only after both the 3D scene and subtitle overlay are composed.
+        manualVideoTrack?.requestFrame();
         if (index % 5 === 0 || index === schedule.length - 1) {
           setRenderProgress(Math.round(((index + 1) / schedule.length) * 100));
         }
