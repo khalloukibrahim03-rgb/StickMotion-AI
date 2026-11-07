@@ -10,6 +10,13 @@ export interface Transform3D {
   scale: [number, number, number];
 }
 
+export interface SubtitleCue {
+  id: string;
+  text: string;
+  startSeconds: number;
+  endSeconds: number;
+}
+
 export interface SceneSound {
   id: string;
   effect: "footstep" | "whoosh" | "landing" | "rain" | "wind";
@@ -56,6 +63,7 @@ export interface AnimationScene {
   camera?: CameraSettings;
   cameraKeyframes?: CameraKeyframe[];
   sounds: SceneSound[];
+  subtitles?: SubtitleCue[];
   keyframes?: PoseKeyframe[];
 }
 
@@ -98,6 +106,7 @@ export function createScene(name = "New scene"): AnimationScene {
       scale: [1, 1, 1],
     },
     sounds: [],
+    subtitles: [],
   };
 }
 
@@ -181,6 +190,7 @@ function isAnimationScene(value: unknown): value is AnimationScene {
     && isVector3(transform.position)
     && isVector3(transform.rotation)
     && isVector3(transform.scale)
+    && (value.subtitles === undefined || (Array.isArray(value.subtitles) && value.subtitles.every((cue) => isRecord(cue) && typeof cue.id === "string" && typeof cue.text === "string" && cue.text.length > 0 && cue.text.length <= 500 && typeof cue.startSeconds === "number" && Number.isFinite(cue.startSeconds) && cue.startSeconds >= 0 && typeof cue.endSeconds === "number" && Number.isFinite(cue.endSeconds) && cue.endSeconds > cue.startSeconds && cue.endSeconds <= duration)))
     && Array.isArray(value.sounds)
     && value.sounds.every((sound) => isSceneSound(sound, duration))
     && (value.keyframes === undefined || (Array.isArray(value.keyframes) && value.keyframes.every((frame) => isPoseKeyframe(frame, duration))));
