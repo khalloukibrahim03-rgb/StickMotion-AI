@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { Motion, PoseKeyframe } from "../core/model";
-import { evaluatePose } from "../core/animation";
+import { evaluatePose, evaluateProceduralMotion } from "../core/animation";
 import { getPlaybackTime } from "../core/playback";
 
 function Bone({ length, radius, color }: { length: number; radius: number; color: string }) {
@@ -12,7 +12,7 @@ function Bone({ length, radius, color }: { length: number; radius: number; color
   </mesh>;
 }
 
-export default function Stickman({ color, motion, playing, keyframes = [] }: { color: string; motion: Motion; playing: boolean; keyframes?: PoseKeyframe[] }) {
+export default function Stickman({ color, motion, playing, durationSeconds, keyframes = [] }: { color: string; motion: Motion; playing: boolean; durationSeconds: number; keyframes?: PoseKeyframe[] }) {
   const root = useRef<THREE.Group>(null);
   const leftArm = useRef<THREE.Group>(null);
   const rightArm = useRef<THREE.Group>(null);
@@ -39,21 +39,16 @@ export default function Stickman({ color, motion, playing, keyframes = [] }: { c
     rightLeg.current?.rotation.set(0, 0, 0);
     if (!playing) return;
     const t = getPlaybackTime();
-    const stride = motion === "run" ? 9 : 5;
-    const swing = motion === "run" ? 0.95 : motion === "walk" ? 0.58 : 0.04;
-    if (root.current) {
-      root.current.position.y = motion === "jump"
-        ? Math.max(0, Math.sin(t * 3.2)) * 0.9
-        : Math.sin(t * (motion === "run" ? 18 : 10)) * (motion === "walk" || motion === "run" ? 0.045 : 0.012);
-    }
-    if (leftLeg.current) leftLeg.current.rotation.x = Math.sin(t * stride) * swing;
-    if (rightLeg.current) rightLeg.current.rotation.x = -Math.sin(t * stride) * swing;
-    if (leftArm.current) leftArm.current.rotation.x = -Math.sin(t * stride) * swing * 0.7;
+    const pose = evaluateProceduralMotion(motion, t, durationSeconds);
+    root.current?.position.set(...pose.rootPosition);
+    if (leftLeg.current) leftLeg.current.rotation.x = pose.legSwing;
+    if (rightLeg.current) rightLeg.current.rotation.x = -pose.legSwing;
+    if (leftArm.current) leftArm.current.rotation.x = -pose.armSwing;
     if (rightArm.current) {
-      rightArm.current.rotation.x = Math.sin(t * stride) * swing * 0.7;
+      rightArm.current.rotation.x = pose.armSwing;
       rightArm.current.rotation.z = THREE.MathUtils.damp(
         rightArm.current.rotation.z,
-        motion === "wave" ? -0.85 + Math.sin(t * 8) * 0.25 : 0,
+        pose.waveArmRotation,
         8,
         delta,
       );
