@@ -16,6 +16,7 @@ export default function App() {
   const [activeSceneId, setActiveSceneId] = useState(project.scenes[0].id);
   const [story, setStory] = useState("A curious stickman walks into a quiet room. It notices a strange object and jumps in surprise. Then it waves hello.");
   const [playing, setPlaying] = useState(true);
+  const [playhead, setPlayhead] = useState(0);
   const [keyframeTime, setKeyframeTime] = useState(0);
   const [keyframeArmAngle, setKeyframeArmAngle] = useState(0);
   const [keyframeRootHeight, setKeyframeRootHeight] = useState(0);
@@ -28,6 +29,30 @@ export default function App() {
     () => project.scenes.reduce((total, scene) => total + scene.durationSeconds, 0),
     [project.scenes],
   );
+
+  useEffect(() => {
+    if (!playing) return;
+    let frame = 0;
+    let previous = 0;
+    const tick = (now: number) => {
+      if (previous) {
+        const delta = (now - previous) / 1000;
+        setPlayhead((time) => {
+          const duration = Math.max(0.1, activeScene?.durationSeconds ?? 4);
+          const next = time + delta;
+          return next >= duration ? next % duration : next;
+        });
+      }
+      previous = now;
+      frame = window.requestAnimationFrame(tick);
+    };
+    frame = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(frame);
+  }, [playing, activeSceneId, activeScene?.durationSeconds]);
+
+  useEffect(() => {
+    setPlayhead(0);
+  }, [activeSceneId]);
 
   useEffect(() => {
     void listProjects().then(setRecentProjects).catch(() => setMessage("Local project storage is unavailable in this browser"));
@@ -135,13 +160,13 @@ export default function App() {
                   <directionalLight position={[4, 8, 5]} intensity={2.1} castShadow shadow-mapSize={[1024, 1024]}/>
                   <Grid position={[0, -0.03, 0]} args={[18, 18]} cellSize={0.5} cellColor="#343b52" sectionColor="#59627d" fadeDistance={20} infiniteGrid/>
                   <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.06, 0]} receiveShadow><planeGeometry args={[100, 100]}/><meshStandardMaterial color="#171c2b" roughness={0.95}/></mesh>
-                  <Stickman color={project.character.primaryColor} motion={activeScene?.motion ?? "idle"} playing={playing} keyframes={activeScene?.keyframes ?? []}/>
+                  <Stickman color={project.character.primaryColor} motion={activeScene?.motion ?? "idle"} playing={playing} timeSeconds={playhead} keyframes={activeScene?.keyframes ?? []}/>
                   <ContactShadows position={[0, -0.045, 0]} opacity={0.38} scale={5} blur={2.4} far={2}/>
                   <OrbitControls target={[0, 1.1, 0]} minDistance={3} maxDistance={12} maxPolarAngle={Math.PI / 2.02}/>
                 </Canvas>
                 <div className="viewport-caption">{activeScene?.name ?? "No scene"} · {(activeScene?.motion ?? "idle").toUpperCase()}</div>
               </div>
-              <div className="viewport-controls"><div>SCENE {String(Math.max(1, project.scenes.findIndex((scene) => scene.id === activeSceneId) + 1)).padStart(2, "0")} / {String(project.scenes.length).padStart(2, "0")}</div><button className="play-button" onClick={() => setPlaying((value) => !value)}>{playing ? <Pause size={16}/> : <Play size={16}/>} {playing ? "Pause" : "Play"}</button><div>{totalDuration}s total</div></div>
+              <div className="viewport-controls"><div>SCENE {String(Math.max(1, project.scenes.findIndex((scene) => scene.id === activeSceneId) + 1)).padStart(2, "0")} / {String(project.scenes.length).padStart(2, "0")}</div><button className="play-button" onClick={() => setPlaying((value) => !value)}>{playing ? <Pause size={16}/> : <Play size={16}/>} {playing ? "Pause" : "Play"}</button><div>{playhead.toFixed(1)}s / {activeScene?.durationSeconds ?? 4}s · {totalDuration}s total</div></div>
             </div>
 
             <div className="timeline-card">
@@ -149,7 +174,7 @@ export default function App() {
               <div className="timeline-track">
                 {project.scenes.map((scene, index) => <button key={scene.id} className={scene.id === activeSceneId ? "scene-card selected" : "scene-card"} style={{ flex: Math.max(1, scene.durationSeconds) }} onClick={() => setActiveSceneId(scene.id)}><small>{String(index + 1).padStart(2, "0")} · {scene.durationSeconds}s</small><strong>{scene.name}</strong><span>{scene.motion}</span></button>)}
               </div>
-              <div className="keyframe-tools"><div><label className="field-label">KEYFRAME TIME <b>{keyframeTime.toFixed(1)}s</b></label><input aria-label="Keyframe time" className="duration-range" type="range" min="0" max={Math.max(0.1, activeScene?.durationSeconds ?? 4)} step="0.1" value={Math.min(keyframeTime, activeScene?.durationSeconds ?? 4)} onChange={(event) => setKeyframeTime(Number(event.target.value))}/></div><div className="keyframe-pose"><label className="field-label">ARM ANGLE <b>{keyframeArmAngle}°</b></label><input className="duration-range" type="range" min="-150" max="150" step="5" value={keyframeArmAngle} onChange={(event) => setKeyframeArmAngle(Number(event.target.value))}/><label className="field-label">ROOT HEIGHT <b>{keyframeRootHeight.toFixed(1)}</b></label><input className="duration-range" type="range" min="0" max="2" step="0.1" value={keyframeRootHeight} onChange={(event) => setKeyframeRootHeight(Number(event.target.value))}/></div><button className="add-button" onClick={addKeyframe}><Plus size={14}/> Add keyframe</button><span>{activeScene?.keyframes?.length ?? 0} keyframes</span></div><div className="timeline-foot"><span>{project.scenes.length} scenes</span><span>Natural sound effects only · {totalDuration} seconds</span></div>
+              <div className="keyframe-tools"><div><label className="field-label">KEYFRAME TIME <b>{keyframeTime.toFixed(1)}s</b></label><input aria-label="Keyframe time" className="duration-range" type="range" min="0" max={Math.max(0.1, activeScene?.durationSeconds ?? 4)} step="0.1" value={Math.min(keyframeTime, activeScene?.durationSeconds ?? 4)} onChange={(event) => setKeyframeTime(Number(event.target.value))}/></div><div className="keyframe-pose"><label className="field-label">ARM ANGLE <b>{keyframeArmAngle}°</b></label><input className="duration-range" type="range" min="-150" max="150" step="5" value={keyframeArmAngle} onChange={(event) => setKeyframeArmAngle(Number(event.target.value))}/><label className="field-label">ROOT HEIGHT <b>{keyframeRootHeight.toFixed(1)}</b></label><input className="duration-range" type="range" min="0" max="2" step="0.1" value={keyframeRootHeight} onChange={(event) => setKeyframeRootHeight(Number(event.target.value))}/></div><button className="add-button" onClick={addKeyframe}><Plus size={14}/> Add keyframe</button><span>{activeScene?.keyframes?.length ?? 0} keyframes</span></div><div className="playhead-control"><label className="field-label">PLAYHEAD <b>{playhead.toFixed(1)}s</b></label><input aria-label="Timeline playhead" className="duration-range" type="range" min="0" max={activeScene?.durationSeconds ?? 4} step="0.05" value={Math.min(playhead, activeScene?.durationSeconds ?? 4)} onChange={(event) => { setPlaying(false); setPlayhead(Number(event.target.value)); }}/><div className="timeline-foot"><span>{project.scenes.length} scenes</span><span>Natural sound effects only · {totalDuration} seconds</span></div></div>
             </div>
           </div>
 
