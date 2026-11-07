@@ -50,7 +50,7 @@ describe("subtitle serialization", () => {
 
 describe("subtitle import", () => {
   it("parses SRT captions and preserves text", () => {
-    const cues = parseSubtitleFile("1\\n00:00:00,500 --> 00:00:02,250\\nHello world\\n");
+    const cues = parseSubtitleFile("1\n00:00:00,500 --> 00:00:02,250\nHello world\n");
     expect(cues).toHaveLength(1);
     expect(cues[0].startSeconds).toBe(0.5);
     expect(cues[0].endSeconds).toBe(2.25);
@@ -58,7 +58,7 @@ describe("subtitle import", () => {
   });
 
   it("parses WebVTT Arabic captions and ignores cue settings", () => {
-    const cues = parseSubtitleFile("WEBVTT\\n\\n00:00:01.000 --> 00:00:03.500 align:start\\nمرحباً بالعالم\\n");
+    const cues = parseSubtitleFile("WEBVTT\n\n00:00:01.000 --> 00:00:03.500 align:start\nمرحباً بالعالم\n");
     expect(cues).toHaveLength(1);
     expect(cues[0].text).toBe("مرحباً بالعالم");
     expect(cues[0].startSeconds).toBe(1);
