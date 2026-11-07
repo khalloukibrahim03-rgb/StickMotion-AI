@@ -12,7 +12,7 @@ import type { EvaluatedPose } from "./core/animation";
 import { createProject, createScene, isAnimationProject, type AnimationProject, type AnimationScene, type Motion } from "./core/model";
 import { listProjects, saveProject as persistProject } from "./core/storage";
 import { getPlaybackTime, setPlaybackTime } from "./core/playback";
-import { getCrossedSoundEvents, playNaturalSound, soundEffectLabels, unlockAudio } from "./core/sound";
+import { beginAudioCapture, endAudioCapture, getCrossedSoundEvents, playNaturalSound, soundEffectLabels, unlockAudio } from "./core/sound";
 import { distributeSubtitlesAcrossScenes, parseSubtitleFile, serializeSubtitles, type SubtitleFormat } from "./core/subtitles";
 import type { CameraSettings, SceneSound, SubtitleCue } from "./core/model";
 
@@ -255,7 +255,10 @@ export default function App() {
     setRenderProgress(0);
     setPlaying(false);
     try {
-      stream = compositeCanvas.captureStream(30);
+      const videoStream = compositeCanvas.captureStream(30);
+      await unlockAudio();
+      const audioStream = beginAudioCapture();
+      stream = new MediaStream([...videoStream.getVideoTracks(), ...(audioStream?.getAudioTracks() ?? [])]);
       recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
       recorder.ondataavailable = (event) => { if (event.data.size > 0) chunks.push(event.data); };
       const stopped = new Promise<void>((resolve, reject) => {
@@ -264,7 +267,8 @@ export default function App() {
         recorder.onstop = () => resolve();
       });
       recorder.start(500);
-      let renderedSceneId = previousSceneId;
+      let renderedSceneId = "";
+      let previousSceneTime = -1 / 30;
       for (let index = 0; index < schedule.length; index += 1) {
         if (renderCancelRef.current) break;
         const frame = schedule[index];
@@ -272,7 +276,10 @@ export default function App() {
         if (scene.id !== renderedSceneId) {
           setActiveSceneId(scene.id);
           renderedSceneId = scene.id;
+          previousSceneTime = -1 / 30;
         }
+        for (const cue of getCrossedSoundEvents(scene.sounds ?? [], previousSceneTime, frame.sceneTime)) playNaturalSound(cue.effect, cue.volume);
+        previousSceneTime = frame.sceneTime;
         setPlaybackTime(frame.sceneTime);
         setPlayhead(frame.sceneTime);
         // Give React Three Fiber a paint opportunity before capturing the next frame.
@@ -337,6 +344,7 @@ export default function App() {
       setMessage(error instanceof Error ? error.message : "Video render failed");
     } finally {
       stream?.getTracks().forEach((track) => track.stop());
+      endAudioCapture();
       setActiveSceneId(previousSceneId);
       setPlaybackTime(previousTime);
       setPlayhead(previousTime);
