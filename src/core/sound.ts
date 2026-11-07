@@ -3,11 +3,23 @@ import type { SceneSound } from "./model";
 type SoundEffect = SceneSound["effect"];
 
 let audioContext: AudioContext | null = null;
+let captureDestination: MediaStreamAudioDestinationNode | null = null;
 
 function getAudioContext(): AudioContext | null {
   if (typeof window === "undefined" || typeof window.AudioContext === "undefined") return null;
   audioContext ??= new window.AudioContext();
   return audioContext;
+}
+
+export function beginAudioCapture(): MediaStream | null {
+  const context = getAudioContext();
+  if (!context || context.state !== "running") return null;
+  captureDestination = context.createMediaStreamDestination();
+  return captureDestination.stream;
+}
+
+export function endAudioCapture(): void {
+  captureDestination = null;
 }
 
 export async function unlockAudio(): Promise<boolean> {
@@ -41,6 +53,7 @@ export function playNaturalSound(effect: SoundEffect, requestedVolume = 0.7): bo
   const output = context.createGain();
   output.gain.setValueAtTime(0.0001, now);
   output.connect(context.destination);
+  if (captureDestination) output.connect(captureDestination);
 
   const noise = makeNoise(context, effect === "wind" ? 1.15 : effect === "rain" ? 0.48 : 0.32);
   const filter = context.createBiquadFilter();
