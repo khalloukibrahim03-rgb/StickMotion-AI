@@ -92,11 +92,18 @@ export default function App() {
   }, [playing, activeSceneId, activeScene?.durationSeconds, project.scenes]);
 
   useEffect(() => {
+    // Rendering drives the playhead frame-by-frame; do not reset it when the
+    // renderer switches scenes or the first frame of each scene is lost.
+    if (rendering) {
+      setSelectedKeyframeId(null);
+      setKeyframeTime(0);
+      return;
+    }
     setPlayhead(0);
     setPlaybackTime(0);
     setSelectedKeyframeId(null);
     setKeyframeTime(0);
-  }, [activeSceneId]);
+  }, [activeSceneId, rendering]);
 
   useEffect(() => {
     void listProjects().then(setRecentProjects).catch(() => setMessage("Local project storage is unavailable in this browser"));
