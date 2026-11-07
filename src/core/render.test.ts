@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildRenderSchedule } from "./render";
+import { buildRenderSchedule, evaluateRenderFrame } from "./render";
 import { createScene } from "./model";
 
 describe("video render schedule", () => {
@@ -22,5 +22,32 @@ describe("video render schedule", () => {
 
   it("returns no frames for an empty scene list", () => {
     expect(buildRenderSchedule([])).toEqual([]);
+  });
+});
+
+
+describe("deterministic render frame evaluation", () => {
+  it("resolves camera, subtitles and sound events from the same scene timestamp", () => {
+    const scene = createScene("Timed scene");
+    scene.durationSeconds = 2;
+    scene.cameraKeyframes = [
+      { id: "camera-start", atSeconds: 0, position: [0, 2, 5], target: [0, 1, 0], fov: 40 },
+      { id: "camera-end", atSeconds: 2, position: [2, 4, 7], target: [0, 1, 0], fov: 60 },
+    ];
+    scene.subtitles = [{ id: "caption", text: "Hello", startSeconds: 0.4, endSeconds: 0.8 }];
+    scene.sounds = [{ id: "step", effect: "footstep", atSeconds: 0.5, volume: 0.6 }];
+    const frame = buildRenderSchedule([scene], 2)[1];
+    const state = evaluateRenderFrame(scene, frame, 0);
+    expect(state.camera.position).toEqual([0.5, 2.5, 5.5]);
+    expect(state.camera.fov).toBe(45);
+    expect(state.activeSubtitles.map((cue) => cue.text)).toEqual(["Hello"]);
+    expect(state.soundEvents.map((cue) => cue.id)).toEqual(["step"]);
+  });
+
+  it("rejects a frame associated with another scene", () => {
+    const scene = createScene("A");
+    const other = createScene("B");
+    const frame = buildRenderSchedule([other])[0];
+    expect(() => evaluateRenderFrame(scene, frame, 0)).toThrow("does not belong");
   });
 });
