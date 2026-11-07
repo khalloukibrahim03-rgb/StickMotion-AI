@@ -13,7 +13,7 @@ import { listProjects, saveProject as persistProject } from "./core/storage";
 import { getPlaybackTime, setPlaybackTime } from "./core/playback";
 import { getCrossedSoundEvents, playNaturalSound, soundEffectLabels, unlockAudio } from "./core/sound";
 import { distributeSubtitlesAcrossScenes, parseSubtitleFile, serializeSubtitles, type SubtitleFormat } from "./core/subtitles";
-import type { SceneSound, SubtitleCue } from "./core/model";
+import type { CameraSettings, SceneSound, SubtitleCue } from "./core/model";
 
 const motions: Motion[] = ["idle", "walk", "run", "jump", "wave"];
 
