@@ -54,7 +54,7 @@ describe("prompt-generated 3D scene props", () => {
     const scenes = buildStoryboard("A stickman jumps over a wooden box. Then it finds a ball beside a table.");
     expect(scenes[0].props?.map((prop) => prop.kind)).toEqual(["box"]);
     expect(scenes[1].props?.map((prop) => prop.kind)).toEqual(["sphere", "table"]);
-    expect(scenes[0].props?.[0].position[0]).toBeGreaterThan(0);
+    expect(scenes[0].props?.[0].position[0]).toBeCloseTo(0.15);
   });
 
   it("recognizes Arabic object descriptions", () => {
