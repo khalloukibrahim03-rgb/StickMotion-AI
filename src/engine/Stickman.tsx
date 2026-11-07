@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { Motion, PoseKeyframe } from "../core/model";
 import { evaluatePose } from "../core/animation";
+import { getPlaybackTime } from "../core/playback";
 
 function Bone({ length, radius, color }: { length: number; radius: number; color: string }) {
   return <mesh position={[0, -length / 2, 0]} castShadow>
@@ -11,7 +12,7 @@ function Bone({ length, radius, color }: { length: number; radius: number; color
   </mesh>;
 }
 
-export default function Stickman({ color, motion, playing, timeSeconds, keyframes = [] }: { color: string; motion: Motion; playing: boolean; timeSeconds: number; keyframes?: PoseKeyframe[] }) {
+export default function Stickman({ color, motion, playing, keyframes = [] }: { color: string; motion: Motion; playing: boolean; keyframes?: PoseKeyframe[] }) {
   const root = useRef<THREE.Group>(null);
   const leftArm = useRef<THREE.Group>(null);
   const rightArm = useRef<THREE.Group>(null);
@@ -21,7 +22,7 @@ export default function Stickman({ color, motion, playing, timeSeconds, keyframe
 
   useFrame((_, delta) => {
     if (keyframes.length > 0) {
-      const pose = evaluatePose(keyframes, timeSeconds);
+      const pose = evaluatePose(keyframes, getPlaybackTime());
       root.current?.position.set(...pose.rootPosition);
       leftArm.current?.rotation.set(...pose.leftArmRotation);
       rightArm.current?.rotation.set(...pose.rightArmRotation);
@@ -37,7 +38,7 @@ export default function Stickman({ color, motion, playing, timeSeconds, keyframe
     leftLeg.current?.rotation.set(0, 0, 0);
     rightLeg.current?.rotation.set(0, 0, 0);
     if (!playing) return;
-    const t = timeSeconds;
+    const t = getPlaybackTime();
     const stride = motion === "run" ? 9 : 5;
     const swing = motion === "run" ? 0.95 : motion === "walk" ? 0.58 : 0.04;
     if (root.current) {
