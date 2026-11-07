@@ -64,3 +64,11 @@ The application is not yet a production release. The story planner is rule-based
 6. Synchronize natural sound effects and subtitles.
 7. Build complete sequence rendering and export.
 8. Add automated tests, browser QA, performance checks, and release documentation.
+
+
+### Natural sound effects
+
+- Each scene stores editable sound cues (effect, scene-local time, and volume) in the project data.
+- The editor synthesizes short footstep, whoosh, landing, rain, and wind effects locally with the Web Audio API; no external audio service or sound assets are required.
+- Cues fire when playback crosses their timestamp, including cues at the start of a scene. Backward seeking does not trigger effects.
+- The product intentionally excludes background music, instrumental tracks, and music beds. Audio export/mixing is not yet implemented.
