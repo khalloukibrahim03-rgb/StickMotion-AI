@@ -101,6 +101,7 @@ export interface ProceduralMotionState {
   armSwing: number;
   bodyBounce: number;
   waveArmRotation: number;
+  leftArmRotationZ: number;
 }
 
 /** Deterministic scene-local movement used by both live preview and video export. */
@@ -115,14 +116,16 @@ export function evaluateProceduralMotion(motion: Motion, atSeconds: number, dura
   const travelDistance = motion === "run" ? 4.4 : isJumpingOver ? 3.6 : 1.8;
   const startX = isTravelling ? -travelDistance / 2 : 0;
   const rootX = isTravelling ? startX + travelDistance * progress : 0;
+  const jumpArc = Math.max(0, Math.sin(Math.PI * progress));
   const bodyBounce = motion === "jump"
-    ? (travelAcrossScene ? Math.sin(Math.PI * progress) * 1.35 : Math.max(0, Math.sin(time * 3.2)) * 0.9)
+    ? jumpArc * (travelAcrossScene ? 1.35 : 0.9)
     : Math.sin(time * (motion === "run" ? 18 : 10)) * (isTravelling ? 0.045 : 0.012);
   return {
     rootPosition: [rootX, bodyBounce, 0],
     legSwing: Math.sin(time * stride) * legSwing,
     armSwing: Math.sin(time * stride) * legSwing * 0.7,
     bodyBounce,
-    waveArmRotation: motion === "wave" ? -0.85 + Math.sin(time * 8) * 0.25 : 0,
+    waveArmRotation: motion === "wave" ? -0.85 + Math.sin(time * 8) * 0.25 : motion === "jump" ? -0.72 * jumpArc : 0,
+    leftArmRotationZ: motion === "jump" ? 0.72 * jumpArc : 0,
   };
 }
