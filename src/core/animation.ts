@@ -1,6 +1,6 @@
 import type { PoseKeyframe } from "./model";
 
-export type EvaluatedPose = Omit<PoseKeyframe, "id" | "atSeconds">;
+export type EvaluatedPose = Omit<PoseKeyframe, "id" | "atSeconds" | "easing">;
 
 const zeroPose: EvaluatedPose = {
   rootPosition: [0, 0, 0],
@@ -12,6 +12,15 @@ const zeroPose: EvaluatedPose = {
 
 function mix(a: number, b: number, t: number): number {
   return a + (b - a) * t;
+}
+
+function applyEasing(t: number, easing: PoseKeyframe["easing"] = "linear"): number {
+  switch (easing) {
+    case "ease-in": return t * t;
+    case "ease-out": return 1 - (1 - t) * (1 - t);
+    case "ease-in-out": return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    default: return t;
+  }
 }
 
 function mixVector(a: [number, number, number], b: [number, number, number], t: number): [number, number, number] {
@@ -37,7 +46,8 @@ export function evaluatePose(keyframes: PoseKeyframe[], atSeconds: number): Eval
     }
   }
   const span = right.atSeconds - left.atSeconds;
-  const t = span <= 0 ? 0 : (atSeconds - left.atSeconds) / span;
+  const rawT = span <= 0 ? 0 : (atSeconds - left.atSeconds) / span;
+  const t = applyEasing(rawT, left.easing);
   return {
     rootPosition: mixVector(left.rootPosition, right.rootPosition, t),
     leftArmRotation: mixVector(left.leftArmRotation, right.leftArmRotation, t),
