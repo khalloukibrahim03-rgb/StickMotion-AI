@@ -10,10 +10,15 @@ The `development` branch is the active engineering branch. The active editor she
 
 - `src/core/model.ts` — versioned project, character, scene, transform, and sound data contracts.
 - `src/core/storyboard.ts` — deterministic offline story-to-scene planner. This is explicitly rule-based, not a hosted AI model.
-- `src/core/animation.ts` — pose keyframe creation and linear interpolation across character joints.
-- `src/core/animation.test.ts` — unit tests for keyframe boundary and interpolation behavior.
+- `src/core/animation.ts` — pose keyframe creation, interpolation, and linear/ease-in/ease-out/ease-in-out curves.
+- `src/core/animation.test.ts` — unit tests for keyframe boundaries, interpolation, and easing.
+- `src/core/model.ts` — strict runtime validation for imported project files and their scenes, transforms, keyframes, and sound cues.
+- `src/core/model.test.ts` — project import validation tests.
+- `src/core/sound.ts` — local Web Audio synthesis and scene-local sound cue scheduling.
+- `src/core/sound.test.ts` — sound cue crossing, time-zero, chronological ordering, and backward-seek tests.
 - `src/core/playback.ts` — external animation clock so Three.js can read playback time without forcing a full React editor render on every frame.
 - `src/core/storage.ts` — IndexedDB project repository with save, load, list, and delete operations.
+- Project transfer — import and export versioned `.stickmotion.json` files from the editor.
 
 ## Product principles
 
@@ -48,21 +53,21 @@ npm run build
 
 ## Validation status
 
-GitHub Actions is configured to install dependencies, run TypeScript checks, and create a production build on pushes and pull requests. A successful run has not yet been confirmed. Local dependency installation and GitHub cloning were blocked by network/DNS restrictions in the current execution environment.
+GitHub Actions is configured to install dependencies, run TypeScript checks, and create a production build on pushes and pull requests. The last confirmed sound-cue timing workflow passed tests, type checking, and production build. The latest project import/export and validation changes are being checked by GitHub Actions. Local dependency installation and GitHub cloning were blocked by network/DNS restrictions in the current execution environment.
 
 ## Current limitations
 
-The application is not yet a production release. The story planner is rule-based rather than generative AI. The character supports procedural motions and editable full-body pose keyframes for both arms, both legs, and the root transform; keyframe interpolation is currently linear. The timeline supports scene sequencing and continuous multi-scene playback, but easing curves, camera tracks, synchronized sound playback, and complete MP4 export are still under development. These limitations will be removed milestone by milestone and verified before release.
+The application is not yet a production release. The story planner is rule-based rather than generative AI. The character supports procedural motions and editable full-body pose keyframes for both arms, both legs, and the root transform, with linear and eased interpolation. Scene-local natural sound cues can be previewed, edited, and triggered during forward timeline playback. Projects can be saved locally and transferred as validated JSON files. Camera keyframe tracks, audio/video export synchronization, and complete MP4 export are still under development. These limitations will be removed milestone by milestone and verified before release.
 
 ## Roadmap
 
 1. Stabilize the project model and local persistence.
 2. Integrate the canonical model into the editor and add project management.
 3. Expand the procedural character rig and keyframe editor with per-joint controls, editable poses, and easing curves.
-4. Expand multi-scene playback with camera controls, transitions, and a real timeline.
-5. Add story planning with editable scene/action/camera suggestions.
-6. Synchronize natural sound effects and subtitles.
-7. Build complete sequence rendering and export.
+4. Add camera presets and camera keyframe tracks to the scene timeline.
+5. Expand story planning with editable scene/action/camera suggestions.
+6. Improve natural sound effect scheduling and add subtitle tracks.
+7. Build complete sequence rendering and MP4 export.
 8. Add automated tests, browser QA, performance checks, and release documentation.
 
 
