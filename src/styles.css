@@ -17,3 +17,5 @@
 .file-input-hidden{display:none}.top-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.transfer-button{background:#20263a;border-color:#343b53;color:#c8cde0}.transfer-button:hover{border-color:#8173d8;color:#eeeaff}@media(max-width:560px){.top-actions{gap:5px}.transfer-button,.top-actions .save-button{padding:7px 8px;font-size:9px}}
 
 .camera-controls{border-top:1px solid #292d40;margin-top:12px;padding-top:10px}.camera-controls .section-heading{margin-bottom:8px}.camera-controls .field-label{margin-top:9px}.camera-controls .icon-action{font-size:9px}
+
+.camera-keyframes{margin-top:12px;padding-top:10px;border-top:1px solid #292d40}.camera-keyframes .field-label{margin:0}.camera-keyframe-list{display:flex;flex-direction:column;gap:5px;margin-top:8px}.camera-keyframe-row{display:flex;align-items:center;justify-content:space-between;background:#1a1e2c;border:1px solid #30364b;border-radius:6px;padding:4px 7px}.camera-keyframe-row .keyframe-chip{border:0;background:transparent;padding:4px}
