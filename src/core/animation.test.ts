@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createPoseKeyframe, evaluatePose } from "./animation";
+import { createPoseKeyframe, evaluateCamera, evaluatePose } from "./animation";
 
 describe("pose keyframe interpolation", () => {
   it("returns the first pose before the first keyframe", () => {
@@ -55,4 +55,16 @@ describe("pose keyframe interpolation", () => {
     });
     expect(evaluatePose([last], 9).rootPosition).toEqual([1, 0, 0]);
   });
+});
+
+
+describe("camera keyframe interpolation", () => {
+  const base = { position: [0, 0, 5] as [number,number,number], target: [0, 0, 0] as [number,number,number], fov: 40 };
+  const track = [
+    { id: "a", atSeconds: 0, position: [0,0,5] as [number,number,number], target: [0,0,0] as [number,number,number], fov: 40 },
+    { id: "b", atSeconds: 2, position: [2,2,7] as [number,number,number], target: [0,1,0] as [number,number,number], fov: 60 },
+  ];
+  it("interpolates camera position, target and field of view", () => { expect(evaluateCamera(track, 1, base)).toEqual({position:[1,1,6],target:[0,0.5,0],fov:50}); });
+  it("uses endpoint keyframes outside the keyed interval", () => { expect(evaluateCamera(track, -1, base).fov).toBe(40); expect(evaluateCamera(track, 3, base).fov).toBe(60); });
+  it("returns the base camera when no keyframes exist", () => { expect(evaluateCamera([], 1, base)).toEqual(base); });
 });
