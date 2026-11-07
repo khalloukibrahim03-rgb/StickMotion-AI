@@ -262,7 +262,13 @@ export default function App() {
     setRenderProgress(0);
     setPlaying(false);
     try {
-      const videoStream = compositeCanvas.captureStream(30);
+      let videoStream = compositeCanvas.captureStream(0);
+      let manualVideoTrack = videoStream.getVideoTracks()[0] as (MediaStreamTrack & { requestFrame?: () => void }) | undefined;
+      if (typeof manualVideoTrack?.requestFrame !== "function") {
+        videoStream.getTracks().forEach((track) => track.stop());
+        videoStream = compositeCanvas.captureStream(30);
+        manualVideoTrack = undefined;
+      }
       await unlockAudio();
       const audioStream = beginAudioCapture();
       stream = new MediaStream([...videoStream.getVideoTracks(), ...(audioStream?.getAudioTracks() ?? [])]);
@@ -289,10 +295,20 @@ export default function App() {
         previousSceneTime = frame.sceneTime;
         setPlaybackTime(frame.sceneTime);
         setPlayhead(frame.sceneTime);
-        // Give React Three Fiber a paint opportunity before capturing the next frame.
-        await new Promise<void>((resolve) => window.setTimeout(resolve, 1000 / 30));
+        // Apply the camera synchronously: React state updates are not a reliable render clock.
+        const frameCamera = evaluateCamera(scene.cameraKeyframes ?? [], frame.sceneTime, scene.camera ?? { position: [4.8, 3.2, 6.2], target: [0, 1.1, 0], fov: 42 });
+        if (liveCameraRef.current) {
+          liveCameraRef.current.position.set(...frameCamera.position);
+          liveCameraRef.current.lookAt(...frameCamera.target);
+          liveCameraRef.current.fov = frameCamera.fov;
+          liveCameraRef.current.updateProjectionMatrix();
+        }
+        orbitControlsRef.current?.target.set(...frameCamera.target);
+        // Wait for React and the R3F frame loop to apply the exact scene-local time.
+        await new Promise<void>((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve())));
         compositeContext.clearRect(0, 0, compositeCanvas.width, compositeCanvas.height);
         compositeContext.drawImage(canvas, 0, 0, compositeCanvas.width, compositeCanvas.height);
+        manualVideoTrack?.requestFrame();
         const activeCues = (scene.subtitles ?? []).filter((cue) => frame.sceneTime >= cue.startSeconds && frame.sceneTime < cue.endSeconds);
         if (activeCues.length) {
           const width = compositeCanvas.width;
@@ -557,7 +573,7 @@ export default function App() {
                   <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.06, 0]} receiveShadow><planeGeometry args={[100, 100]}/><meshStandardMaterial color="#171c2b" roughness={0.95}/></mesh>
                   <Stickman color={project.character.primaryColor} motion={activeScene?.motion ?? "idle"} durationSeconds={activeScene?.durationSeconds ?? 4} keyframes={activeScene?.keyframes ?? []}/>
                   <ContactShadows position={[0, -0.045, 0]} opacity={0.38} scale={5} blur={2.4} far={2}/>
-                  <CameraAnimator settings={cameraSettings} animate={playing && !rendering && Boolean(activeScene?.cameraKeyframes?.length)} sceneId={activeSceneId}/><OrbitControls ref={(controls) => { orbitControlsRef.current = controls as unknown as { target: THREE.Vector3 } | null; }} enabled={!(playing && Boolean(activeScene?.cameraKeyframes?.length))} target={cameraSettings.target} minDistance={3} maxDistance={12} maxPolarAngle={Math.PI / 2.02}/>
+                  <CameraAnimator settings={cameraSettings} animate={playing && !rendering && Boolean(activeScene?.cameraKeyframes?.length)} sceneId={activeSceneId}/><OrbitControls ref={(controls) => { orbitControlsRef.current = controls as unknown as { target: THREE.Vector3 } | null; }} enabled={!rendering && !(playing && Boolean(activeScene?.cameraKeyframes?.length))} target={cameraSettings.target} minDistance={3} maxDistance={12} maxPolarAngle={Math.PI / 2.02}/>
                 </Canvas>
                 <div className="viewport-caption">{activeScene?.name ?? "No scene"} · {(activeScene?.motion ?? "idle").toUpperCase()}</div>{(activeScene?.subtitles ?? []).filter((cue) => playhead >= cue.startSeconds && playhead < cue.endSeconds).map((cue) => <div className="subtitle-preview" key={cue.id}>{cue.text}</div>)}
               </div>
