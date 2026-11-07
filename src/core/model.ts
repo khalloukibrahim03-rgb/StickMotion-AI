@@ -17,6 +17,16 @@ export interface SceneSound {
   volume: number;
 }
 
+export interface PoseKeyframe {
+  id: string;
+  atSeconds: number;
+  rootPosition: [number, number, number];
+  leftArmRotation: [number, number, number];
+  rightArmRotation: [number, number, number];
+  leftLegRotation: [number, number, number];
+  rightLegRotation: [number, number, number];
+}
+
 export interface AnimationScene {
   id: string;
   name: string;
@@ -26,6 +36,7 @@ export interface AnimationScene {
   environment: EnvironmentPreset;
   characterTransform: Transform3D;
   sounds: SceneSound[];
+  keyframes?: PoseKeyframe[];
 }
 
 export interface CharacterDefinition {
