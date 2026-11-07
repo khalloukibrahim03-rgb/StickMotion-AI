@@ -39,3 +39,11 @@ describe("multi-action prompt sequencing", () => {
     expect(beats.map((beat) => beat.suggestedMotion)).toEqual(["walk", "jump", "wave"]);
   });
 });
+
+
+describe("prompt environment inference", () => {
+  it("selects night and nature stages from scene descriptions", () => {
+    const scenes = buildStoryboard("A stickman walks through a rainy neon street. Then it waves in a quiet forest.");
+    expect(scenes.map((scene) => scene.environment)).toEqual(["night", "nature"]);
+  });
+});
