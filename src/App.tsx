@@ -285,6 +285,7 @@ export default function App() {
       let previousSceneTime = -1 / 30;
       for (let index = 0; index < schedule.length; index += 1) {
         if (renderCancelRef.current) break;
+        const frameStartedAt = window.performance.now();
         const frame = schedule[index];
         const scene = project.scenes[frame.sceneIndex];
         if (scene.id !== renderedSceneId) {
@@ -306,7 +307,10 @@ export default function App() {
         }
         orbitControlsRef.current?.target.set(...frameCamera.target);
         // Wait for React and the R3F frame loop to apply the exact scene-local time.
-        await new Promise<void>((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve())));
+        await new Promise<void>((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+          const elapsed = window.performance.now() - frameStartedAt;
+          window.setTimeout(resolve, Math.max(0, 1000 / 30 - elapsed));
+        })));
         compositeContext.clearRect(0, 0, compositeCanvas.width, compositeCanvas.height);
         compositeContext.drawImage(canvas, 0, 0, compositeCanvas.width, compositeCanvas.height);
         const activeCues = (scene.subtitles ?? []).filter((cue) => frame.sceneTime >= cue.startSeconds && frame.sceneTime < cue.endSeconds);
