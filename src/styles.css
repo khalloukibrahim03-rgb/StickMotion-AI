@@ -15,3 +15,5 @@
 
 
 .file-input-hidden{display:none}.top-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.transfer-button{background:#20263a;border-color:#343b53;color:#c8cde0}.transfer-button:hover{border-color:#8173d8;color:#eeeaff}@media(max-width:560px){.top-actions{gap:5px}.transfer-button,.top-actions .save-button{padding:7px 8px;font-size:9px}}
+
+.camera-controls{border-top:1px solid #292d40;margin-top:12px;padding-top:10px}.camera-controls .section-heading{margin-bottom:8px}.camera-controls .field-label{margin-top:9px}.camera-controls .icon-action{font-size:9px}
