@@ -47,3 +47,18 @@ describe("prompt environment inference", () => {
     expect(scenes.map((scene) => scene.environment)).toEqual(["night", "nature"]);
   });
 });
+
+
+describe("prompt-generated 3D scene props", () => {
+  it("adds recognizable objects to the matching scene", () => {
+    const scenes = buildStoryboard("A stickman jumps over a wooden box. Then it finds a ball beside a table.");
+    expect(scenes[0].props?.map((prop) => prop.kind)).toEqual(["box"]);
+    expect(scenes[1].props?.map((prop) => prop.kind)).toEqual(["sphere", "table"]);
+    expect(scenes[0].props?.[0].position[0]).toBeGreaterThan(0);
+  });
+
+  it("recognizes Arabic object descriptions", () => {
+    const scenes = buildStoryboard("الشخصية تقفز فوق صندوق خشبي. ثم تقترب من كرة.");
+    expect(scenes.map((scene) => scene.props?.map((prop) => prop.kind))).toEqual([["box"], ["sphere"]]);
+  });
+});
