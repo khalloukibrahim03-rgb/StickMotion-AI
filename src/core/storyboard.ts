@@ -18,10 +18,10 @@ export function splitStoryIntoBeats(story: string, limit = 12): StoryBeat[] {
   return sentences.map((text) => ({
     text,
     suggestedMotion: inferMotion(text),
-  if (/\b(run|runs|running|rushed|rush|chase|chases|sprint|sprints)\b|يركض|يجري|ركض|بسرعة|يهرب/.test(value)) return "run";
-  if (/\b(jump|jumps|jumping|leap|leaps|hop|hops|surprise|surprised|fall|falls|falling)\b|يقفز|قفز|يسقط|يتفاجأ|مندهش/.test(value)) return "jump";
-  if (/\b(wave|waves|waving|hello|greet|greets|greeting|goodbye|bye)\b|يلوّح|يلوح|تلوح|تلوّح|يحيي|مرحبا|وداعا/.test(value)) return "wave";
-  if (/\b(walk|walks|walking|walked|enter|enters|entering|leave|leaves|approach|approaches|step|steps|travel|travels)\b|يمشي|تمشي|المشي|مشى|يدخل|تدخل|يخرج|تخرج|يقترب|تقترب|يتقدم|تتقدم/.test(value)) return "walk";
+    durationSeconds: estimateDuration(text),
+  }));
+}
+
 function inferMotion(text: string): Motion {
   const value = text.toLocaleLowerCase();
   if (/\b(run|runs|running|rushed|rush|chase|chases|sprint|sprints)\b|يركض|يجري|ركض|بسرعة|يهرب/.test(value)) return "run";
@@ -49,7 +49,7 @@ function createCinematicCamera(scene: AnimationScene, text: string, index: numbe
   scene.camera = { position: start, target: [0, 1.05, 0], fov };
   scene.cameraKeyframes = [
     { id: createId("camera"), atSeconds: 0, easing: "ease-in-out", position: start, target: [0, 1.05, 0], fov },
-    { id: createId("camera"), atSeconds: scene.durationSeconds, easing: "ease-in-out", position: finish, target: [0, 1.05, 0], fov: scene.camera.fov },
+    { id: createId("camera"), atSeconds: scene.durationSeconds, easing: "ease-in-out", position: finish, target: [0, 1.05, 0], fov },
   ];
 }
 
