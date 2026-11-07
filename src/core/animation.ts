@@ -1,4 +1,4 @@
-import type { PoseKeyframe } from "./model";
+import type { CameraKeyframe, CameraSettings, PoseKeyframe } from "./model";
 
 export type EvaluatedPose = Omit<PoseKeyframe, "id" | "atSeconds" | "easing">;
 
@@ -77,4 +77,19 @@ export function createPoseKeyframe(atSeconds: number, pose: EvaluatedPose = zero
     leftLegRotation: [...pose.leftLegRotation],
     rightLegRotation: [...pose.rightLegRotation],
   };
+}
+
+
+/** Evaluate a scene-local camera track, preserving the base camera outside keyed ranges. */
+export function evaluateCamera(keyframes: CameraKeyframe[], atSeconds: number, fallback: CameraSettings): CameraSettings {
+  if (!keyframes.length) return fallback;
+  const frames = [...keyframes].sort((a, b) => a.atSeconds - b.atSeconds);
+  const first = frames[0]; const last = frames[frames.length - 1];
+  if (atSeconds <= first.atSeconds) return { position: [...first.position], target: [...first.target], fov: first.fov };
+  if (atSeconds >= last.atSeconds) return { position: [...last.position], target: [...last.target], fov: last.fov };
+  let left = first; let right = last;
+  for (let i = 0; i < frames.length - 1; i += 1) { if (atSeconds >= frames[i].atSeconds && atSeconds <= frames[i + 1].atSeconds) { left = frames[i]; right = frames[i + 1]; break; } }
+  const span = right.atSeconds - left.atSeconds;
+  const t = applyEasing(span <= 0 ? 0 : (atSeconds - left.atSeconds) / span, left.easing);
+  return { position: mixVector(left.position, right.position, t), target: mixVector(left.target, right.target, t), fov: mix(left.fov, right.fov, t) };
 }
