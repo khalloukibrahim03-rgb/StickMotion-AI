@@ -21,6 +21,7 @@ export default function App() {
   const [playing, setPlaying] = useState(true);
   const [playhead, setPlayhead] = useState(0);
   const [keyframeTime, setKeyframeTime] = useState(0);
+  const [keyframeEasing, setKeyframeEasing] = useState<"linear" | "ease-in" | "ease-out" | "ease-in-out">("linear");
   const [keyframeLeftArm, setKeyframeLeftArm] = useState(0);
   const [keyframeRightArm, setKeyframeRightArm] = useState(0);
   const [keyframeLeftLeg, setKeyframeLeftLeg] = useState(0);
@@ -150,6 +151,7 @@ export default function App() {
   function addKeyframe() {
     if (!activeScene) return;
     const frame = createPoseKeyframe(keyframeTime, currentPose());
+    frame.easing = keyframeEasing;
     const frames = [...(activeScene.keyframes ?? []).filter((item) => Math.abs(item.atSeconds - keyframeTime) > 0.001), frame].sort((a, b) => a.atSeconds - b.atSeconds);
     updateScene({ keyframes: frames });
     setSelectedKeyframeId(frame.id);
@@ -163,6 +165,7 @@ export default function App() {
     const frames = (activeScene.keyframes ?? []).filter((frame) => frame.id !== selectedKeyframeId && Math.abs(frame.atSeconds - keyframeTime) > 0.001);
     const updated = createPoseKeyframe(keyframeTime, currentPose());
     updated.id = selectedKeyframeId;
+    updated.easing = keyframeEasing;
     updateScene({ keyframes: [...frames, updated].sort((a, b) => a.atSeconds - b.atSeconds) });
     setPlayhead(keyframeTime);
     setPlaybackTime(keyframeTime);
@@ -172,6 +175,7 @@ export default function App() {
   function selectKeyframe(frame: NonNullable<AnimationScene["keyframes"]>[number]) {
     const degrees = (radians: number) => Math.round(radians * 180 / Math.PI);
     setSelectedKeyframeId(frame.id);
+    setKeyframeEasing(frame.easing ?? "linear");
     setKeyframeTime(frame.atSeconds);
     setPlayhead(frame.atSeconds);
     setPlaybackTime(frame.atSeconds);
@@ -271,7 +275,7 @@ export default function App() {
               <div className="timeline-track">
                 {project.scenes.map((scene, index) => <button key={scene.id} className={scene.id === activeSceneId ? "scene-card selected" : "scene-card"} style={{ flex: Math.max(1, scene.durationSeconds) }} onClick={() => setActiveSceneId(scene.id)}><small>{String(index + 1).padStart(2, "0")} · {scene.durationSeconds}s</small><strong>{scene.name}</strong><span>{scene.motion}</span></button>)}
               </div>
-              <div className="keyframe-tools"><div><label className="field-label">KEYFRAME TIME <b>{keyframeTime.toFixed(1)}s</b></label><input aria-label="Keyframe time" className="duration-range" type="range" min="0" max={Math.max(0.1, activeScene?.durationSeconds ?? 4)} step="0.1" value={Math.min(keyframeTime, activeScene?.durationSeconds ?? 4)} onChange={(event) => setKeyframeTime(Number(event.target.value))}/></div><div className="keyframe-pose">
+              <div className="keyframe-tools"><div><label className="field-label">KEYFRAME TIME <b>{keyframeTime.toFixed(1)}s</b></label><input aria-label="Keyframe time" className="duration-range" type="range" min="0" max={Math.max(0.1, activeScene?.durationSeconds ?? 4)} step="0.1" value={Math.min(keyframeTime, activeScene?.durationSeconds ?? 4)} onChange={(event) => setKeyframeTime(Number(event.target.value))}/></div><div className="keyframe-easing"><label className="field-label">INTERPOLATION CURVE</label><select className="text-input" aria-label="Keyframe interpolation curve" value={keyframeEasing} onChange={(event) => setKeyframeEasing(event.target.value as "linear" | "ease-in" | "ease-out" | "ease-in-out")}><option value="linear">Linear</option><option value="ease-in">Ease in</option><option value="ease-out">Ease out</option><option value="ease-in-out">Ease in &amp; out</option></select><small>Controls the motion from this keyframe to the next.</small></div><div className="keyframe-pose">
                   <label className="field-label">LEFT ARM <b>{keyframeLeftArm}°</b></label><input aria-label="Left arm rotation" className="duration-range" type="range" min="-150" max="150" step="5" value={keyframeLeftArm} onChange={(event) => setKeyframeLeftArm(Number(event.target.value))}/>
                   <label className="field-label">RIGHT ARM <b>{keyframeRightArm}°</b></label><input aria-label="Right arm rotation" className="duration-range" type="range" min="-150" max="150" step="5" value={keyframeRightArm} onChange={(event) => setKeyframeRightArm(Number(event.target.value))}/>
                   <label className="field-label">LEFT LEG <b>{keyframeLeftLeg}°</b></label><input aria-label="Left leg rotation" className="duration-range" type="range" min="-90" max="90" step="5" value={keyframeLeftLeg} onChange={(event) => setKeyframeLeftLeg(Number(event.target.value))}/>
