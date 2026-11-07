@@ -44,7 +44,7 @@ export interface AnimationScene {
   motion: Motion;
   environment: EnvironmentPreset;
   characterTransform: Transform3D;
-  camera: CameraSettings;
+  camera?: CameraSettings;
   sounds: SceneSound[];
   keyframes?: PoseKeyframe[];
 }
@@ -161,12 +161,12 @@ function isAnimationScene(value: unknown): value is AnimationScene {
     && typeof value.description === "string"
     && motions.includes(value.motion as Motion)
     && environments.includes(value.environment as EnvironmentPreset)
-    && isRecord(value.camera)
-    && isVector3(value.camera.position)
-    && isVector3(value.camera.target)
-    && typeof value.camera.fov === "number"
-    && Number.isFinite(value.camera.fov)
-    && value.camera.fov >= 20 && value.camera.fov <= 80
+    && (value.camera === undefined || (isRecord(value.camera)
+      && isVector3(value.camera.position)
+      && isVector3(value.camera.target)
+      && typeof value.camera.fov === "number"
+      && Number.isFinite(value.camera.fov)
+      && value.camera.fov >= 20 && value.camera.fov <= 80))
     && isVector3(transform.position)
     && isVector3(transform.rotation)
     && isVector3(transform.scale)
