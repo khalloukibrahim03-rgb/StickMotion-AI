@@ -1,4 +1,6 @@
-import type { AnimationScene } from "./model";
+import { evaluateCamera } from "./animation";
+import { getCrossedSoundEvents } from "./sound";
+import type { AnimationScene, CameraSettings, SceneSound, SubtitleCue } from "./model";
 
 export interface RenderFrame {
   sceneId: string;
@@ -30,4 +32,27 @@ export function getRenderMimeType(): string | null {
   if (typeof MediaRecorder === "undefined") return null;
   const candidates = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
   return candidates.find((type) => MediaRecorder.isTypeSupported(type)) ?? null;
+}
+
+
+export interface RenderFrameState {
+  camera: CameraSettings;
+  activeSubtitles: SubtitleCue[];
+  soundEvents: SceneSound[];
+}
+
+/** Resolve all time-dependent scene data from one exact render timestamp. */
+export function evaluateRenderFrame(scene: AnimationScene, frame: RenderFrame, previousSceneTime: number): RenderFrameState {
+  if (frame.sceneId !== scene.id) throw new Error("Render frame does not belong to the supplied scene");
+  const sceneTime = Math.max(0, Math.min(scene.durationSeconds, frame.sceneTime));
+  const fallbackCamera: CameraSettings = scene.camera ?? {
+    position: [4.8, 3.2, 6.2],
+    target: [0, 1.1, 0],
+    fov: 42,
+  };
+  return {
+    camera: evaluateCamera(scene.cameraKeyframes ?? [], sceneTime, fallbackCamera),
+    activeSubtitles: (scene.subtitles ?? []).filter((cue) => sceneTime >= cue.startSeconds && sceneTime < cue.endSeconds),
+    soundEvents: getCrossedSoundEvents(scene.sounds ?? [], previousSceneTime, sceneTime),
+  };
 }
