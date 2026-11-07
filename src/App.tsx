@@ -46,12 +46,20 @@ export default function App() {
       if (previous) {
         const delta = (now - previous) / 1000;
         const duration = Math.max(0.1, activeScene?.durationSeconds ?? 4);
-        const next = (getPlaybackTime() + delta) % duration;
-        setPlaybackTime(next);
-        // Keep the React editor responsive without re-rendering the whole UI at 60fps.
-        if (now - lastUiUpdate >= 50) {
-          setPlayhead(next);
-          lastUiUpdate = now;
+        const next = getPlaybackTime() + delta;
+        if (next >= duration) {
+          const currentIndex = project.scenes.findIndex((scene) => scene.id === activeSceneId);
+          const nextScene = project.scenes[(currentIndex + 1) % project.scenes.length];
+          setPlaybackTime(0);
+          setPlayhead(0);
+          if (nextScene) setActiveSceneId(nextScene.id);
+        } else {
+          setPlaybackTime(next);
+          // Keep the React editor responsive without re-rendering the whole UI at 60fps.
+          if (now - lastUiUpdate >= 50) {
+            setPlayhead(next);
+            lastUiUpdate = now;
+          }
         }
       }
       previous = now;
@@ -59,7 +67,7 @@ export default function App() {
     };
     frame = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(frame);
-  }, [playing, activeSceneId, activeScene?.durationSeconds]);
+  }, [playing, activeSceneId, activeScene?.durationSeconds, project.scenes]);
 
   useEffect(() => {
     setPlayhead(0);
