@@ -52,6 +52,16 @@ export interface CameraSettings {
   fov: number;
 }
 
+export type ScenePropKind = "box" | "sphere" | "cylinder" | "table";
+
+export interface SceneProp {
+  id: string;
+  kind: ScenePropKind;
+  position: [number, number, number];
+  scale: [number, number, number];
+  color: string;
+}
+
 export interface AnimationScene {
   id: string;
   name: string;
@@ -60,6 +70,7 @@ export interface AnimationScene {
   motion: Motion;
   environment: EnvironmentPreset;
   characterTransform: Transform3D;
+  props?: SceneProp[];
   camera?: CameraSettings;
   cameraKeyframes?: CameraKeyframe[];
   sounds: SceneSound[];
@@ -141,6 +152,17 @@ const environments: EnvironmentPreset[] = ["studio", "night", "nature"];
 const soundEffects: SceneSound["effect"][] = ["footstep", "whoosh", "landing", "rain", "wind"];
 const easingCurves: EasingCurve[] = ["linear", "ease-in", "ease-out", "ease-in-out"];
 
+function isSceneProp(value: unknown): value is SceneProp {
+  if (!isRecord(value)) return false;
+  return typeof value.id === "string"
+    && ["box", "sphere", "cylinder", "table"].includes(String(value.kind))
+    && isVector3(value.position)
+    && isVector3(value.scale)
+    && value.scale.every((part) => part > 0 && part <= 20)
+    && typeof value.color === "string"
+    && /^#[0-9a-fA-F]{6}$/.test(value.color);
+}
+
 function isSceneSound(value: unknown, duration: number): value is SceneSound {
   if (!isRecord(value)) return false;
   return typeof value.id === "string"
@@ -190,6 +212,7 @@ function isAnimationScene(value: unknown): value is AnimationScene {
     && isVector3(transform.position)
     && isVector3(transform.rotation)
     && isVector3(transform.scale)
+    && (value.props === undefined || (Array.isArray(value.props) && value.props.length <= 30 && value.props.every(isSceneProp)))
     && (value.subtitles === undefined || (Array.isArray(value.subtitles) && value.subtitles.every((cue) => isRecord(cue) && typeof cue.id === "string" && typeof cue.text === "string" && cue.text.length > 0 && cue.text.length <= 500 && typeof cue.startSeconds === "number" && Number.isFinite(cue.startSeconds) && cue.startSeconds >= 0 && typeof cue.endSeconds === "number" && Number.isFinite(cue.endSeconds) && cue.endSeconds > cue.startSeconds && cue.endSeconds <= duration)))
     && Array.isArray(value.sounds)
     && value.sounds.every((sound) => isSceneSound(sound, duration))
