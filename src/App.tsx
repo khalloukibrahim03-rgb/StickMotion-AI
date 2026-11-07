@@ -18,8 +18,13 @@ export default function App() {
   const [playing, setPlaying] = useState(true);
   const [playhead, setPlayhead] = useState(0);
   const [keyframeTime, setKeyframeTime] = useState(0);
-  const [keyframeArmAngle, setKeyframeArmAngle] = useState(0);
-  const [keyframeRootHeight, setKeyframeRootHeight] = useState(0);
+  const [keyframeLeftArm, setKeyframeLeftArm] = useState(0);
+  const [keyframeRightArm, setKeyframeRightArm] = useState(0);
+  const [keyframeLeftLeg, setKeyframeLeftLeg] = useState(0);
+  const [keyframeRightLeg, setKeyframeRightLeg] = useState(0);
+  const [keyframeRootX, setKeyframeRootX] = useState(0);
+  const [keyframeRootY, setKeyframeRootY] = useState(0);
+  const [keyframeRootZ, setKeyframeRootZ] = useState(0);
   const [selectedKeyframeId, setSelectedKeyframeId] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [message, setMessage] = useState("Local workspace ready");
@@ -109,23 +114,49 @@ export default function App() {
     setMessage("Opened " + found.title);
   }
 
+  function currentPose(): EvaluatedPose {
+    const radians = (degrees: number) => degrees * Math.PI / 180;
+    return {
+      rootPosition: [keyframeRootX, keyframeRootY, keyframeRootZ],
+      leftArmRotation: [0, 0, radians(keyframeLeftArm)],
+      rightArmRotation: [0, 0, radians(keyframeRightArm)],
+      leftLegRotation: [radians(keyframeLeftLeg), 0, 0],
+      rightLegRotation: [radians(keyframeRightLeg), 0, 0],
+    };
+  }
+
   function addKeyframe() {
     if (!activeScene) return;
-    const arm = keyframeArmAngle * Math.PI / 180;
-    const pose: EvaluatedPose = { rootPosition: [0, keyframeRootHeight, 0], leftArmRotation: [0, 0, arm], rightArmRotation: [0, 0, -arm], leftLegRotation: [0, 0, 0], rightLegRotation: [0, 0, 0] };
-    const frame = createPoseKeyframe(keyframeTime, pose);
-    updateScene({ keyframes: [...(activeScene.keyframes ?? []).filter((item) => Math.abs(item.atSeconds - keyframeTime) > 0.001), frame].sort((a, b) => a.atSeconds - b.atSeconds) });
+    const frame = createPoseKeyframe(keyframeTime, currentPose());
+    const frames = [...(activeScene.keyframes ?? []).filter((item) => Math.abs(item.atSeconds - keyframeTime) > 0.001), frame].sort((a, b) => a.atSeconds - b.atSeconds);
+    updateScene({ keyframes: frames });
     setSelectedKeyframeId(frame.id);
     setPlayhead(keyframeTime);
     setMessage("Keyframe added at " + keyframeTime.toFixed(1) + "s");
   }
 
+  function updateKeyframe() {
+    if (!activeScene || !selectedKeyframeId) return;
+    const frames = (activeScene.keyframes ?? []).filter((frame) => frame.id !== selectedKeyframeId && Math.abs(frame.atSeconds - keyframeTime) > 0.001);
+    const updated = createPoseKeyframe(keyframeTime, currentPose());
+    updated.id = selectedKeyframeId;
+    updateScene({ keyframes: [...frames, updated].sort((a, b) => a.atSeconds - b.atSeconds) });
+    setPlayhead(keyframeTime);
+    setMessage("Selected keyframe updated");
+  }
+
   function selectKeyframe(frame: NonNullable<AnimationScene["keyframes"]>[number]) {
+    const degrees = (radians: number) => Math.round(radians * 180 / Math.PI);
     setSelectedKeyframeId(frame.id);
     setKeyframeTime(frame.atSeconds);
     setPlayhead(frame.atSeconds);
-    setKeyframeArmAngle(Math.round(frame.leftArmRotation[2] * 180 / Math.PI));
-    setKeyframeRootHeight(frame.rootPosition[1]);
+    setKeyframeLeftArm(degrees(frame.leftArmRotation[2]));
+    setKeyframeRightArm(degrees(frame.rightArmRotation[2]));
+    setKeyframeLeftLeg(degrees(frame.leftLegRotation[0]));
+    setKeyframeRightLeg(degrees(frame.rightLegRotation[0]));
+    setKeyframeRootX(frame.rootPosition[0]);
+    setKeyframeRootY(frame.rootPosition[1]);
+    setKeyframeRootZ(frame.rootPosition[2]);
   }
 
   function removeKeyframe() {
@@ -195,7 +226,15 @@ export default function App() {
               <div className="timeline-track">
                 {project.scenes.map((scene, index) => <button key={scene.id} className={scene.id === activeSceneId ? "scene-card selected" : "scene-card"} style={{ flex: Math.max(1, scene.durationSeconds) }} onClick={() => setActiveSceneId(scene.id)}><small>{String(index + 1).padStart(2, "0")} · {scene.durationSeconds}s</small><strong>{scene.name}</strong><span>{scene.motion}</span></button>)}
               </div>
-              <div className="keyframe-tools"><div><label className="field-label">KEYFRAME TIME <b>{keyframeTime.toFixed(1)}s</b></label><input aria-label="Keyframe time" className="duration-range" type="range" min="0" max={Math.max(0.1, activeScene?.durationSeconds ?? 4)} step="0.1" value={Math.min(keyframeTime, activeScene?.durationSeconds ?? 4)} onChange={(event) => setKeyframeTime(Number(event.target.value))}/></div><div className="keyframe-pose"><label className="field-label">ARM ANGLE <b>{keyframeArmAngle}°</b></label><input className="duration-range" type="range" min="-150" max="150" step="5" value={keyframeArmAngle} onChange={(event) => setKeyframeArmAngle(Number(event.target.value))}/><label className="field-label">ROOT HEIGHT <b>{keyframeRootHeight.toFixed(1)}</b></label><input className="duration-range" type="range" min="0" max="2" step="0.1" value={keyframeRootHeight} onChange={(event) => setKeyframeRootHeight(Number(event.target.value))}/></div><div className="keyframe-actions"><button className="add-button" onClick={addKeyframe}><Plus size={14}/> Add keyframe</button><button className="delete-keyframe" onClick={removeKeyframe} disabled={!selectedKeyframeId}><Trash2 size={13}/> Delete</button></div><span>{activeScene?.keyframes?.length ?? 0} keyframes</span></div><div className="keyframe-list">{(activeScene?.keyframes ?? []).map((frame, index) => <button key={frame.id} className={selectedKeyframeId === frame.id ? "keyframe-chip selected" : "keyframe-chip"} onClick={() => selectKeyframe(frame)}>{String(index + 1).padStart(2, "0")} · {frame.atSeconds.toFixed(1)}s</button>)}</div><div className="playhead-control"><label className="field-label">PLAYHEAD <b>{playhead.toFixed(1)}s</b></label><input aria-label="Timeline playhead" className="duration-range" type="range" min="0" max={activeScene?.durationSeconds ?? 4} step="0.05" value={Math.min(playhead, activeScene?.durationSeconds ?? 4)} onChange={(event) => { setPlaying(false); setPlayhead(Number(event.target.value)); }}/><div className="timeline-foot"><span>{project.scenes.length} scenes</span><span>Natural sound effects only · {totalDuration} seconds</span></div></div>
+              <div className="keyframe-tools"><div><label className="field-label">KEYFRAME TIME <b>{keyframeTime.toFixed(1)}s</b></label><input aria-label="Keyframe time" className="duration-range" type="range" min="0" max={Math.max(0.1, activeScene?.durationSeconds ?? 4)} step="0.1" value={Math.min(keyframeTime, activeScene?.durationSeconds ?? 4)} onChange={(event) => setKeyframeTime(Number(event.target.value))}/></div><div className="keyframe-pose">
+                  <label className="field-label">LEFT ARM <b>{keyframeLeftArm}°</b></label><input aria-label="Left arm rotation" className="duration-range" type="range" min="-150" max="150" step="5" value={keyframeLeftArm} onChange={(event) => setKeyframeLeftArm(Number(event.target.value))}/>
+                  <label className="field-label">RIGHT ARM <b>{keyframeRightArm}°</b></label><input aria-label="Right arm rotation" className="duration-range" type="range" min="-150" max="150" step="5" value={keyframeRightArm} onChange={(event) => setKeyframeRightArm(Number(event.target.value))}/>
+                  <label className="field-label">LEFT LEG <b>{keyframeLeftLeg}°</b></label><input aria-label="Left leg rotation" className="duration-range" type="range" min="-90" max="90" step="5" value={keyframeLeftLeg} onChange={(event) => setKeyframeLeftLeg(Number(event.target.value))}/>
+                  <label className="field-label">RIGHT LEG <b>{keyframeRightLeg}°</b></label><input aria-label="Right leg rotation" className="duration-range" type="range" min="-90" max="90" step="5" value={keyframeRightLeg} onChange={(event) => setKeyframeRightLeg(Number(event.target.value))}/>
+                  <label className="field-label">ROOT X <b>{keyframeRootX.toFixed(1)}</b></label><input aria-label="Root X position" className="duration-range" type="range" min="-2" max="2" step="0.1" value={keyframeRootX} onChange={(event) => setKeyframeRootX(Number(event.target.value))}/>
+                  <label className="field-label">ROOT Y <b>{keyframeRootY.toFixed(1)}</b></label><input aria-label="Root Y position" className="duration-range" type="range" min="0" max="2" step="0.1" value={keyframeRootY} onChange={(event) => setKeyframeRootY(Number(event.target.value))}/>
+                  <label className="field-label">ROOT Z <b>{keyframeRootZ.toFixed(1)}</b></label><input aria-label="Root Z position" className="duration-range" type="range" min="-2" max="2" step="0.1" value={keyframeRootZ} onChange={(event) => setKeyframeRootZ(Number(event.target.value))}/>
+                </div><div className="keyframe-actions"><button className="add-button" onClick={addKeyframe}><Plus size={14}/> Add</button><button className="add-button" onClick={updateKeyframe} disabled={!selectedKeyframeId}>Update</button><button className="delete-keyframe" onClick={removeKeyframe} disabled={!selectedKeyframeId}><Trash2 size={13}/> Delete</button></div><span>{activeScene?.keyframes?.length ?? 0} keyframes</span></div><div className="keyframe-list">{(activeScene?.keyframes ?? []).map((frame, index) => <button key={frame.id} className={selectedKeyframeId === frame.id ? "keyframe-chip selected" : "keyframe-chip"} onClick={() => selectKeyframe(frame)}>{String(index + 1).padStart(2, "0")} · {frame.atSeconds.toFixed(1)}s</button>)}</div><div className="playhead-control"><label className="field-label">PLAYHEAD <b>{playhead.toFixed(1)}s</b></label><input aria-label="Timeline playhead" className="duration-range" type="range" min="0" max={activeScene?.durationSeconds ?? 4} step="0.05" value={Math.min(playhead, activeScene?.durationSeconds ?? 4)} onChange={(event) => { setPlaying(false); setPlayhead(Number(event.target.value)); }}/><div className="timeline-foot"><span>{project.scenes.length} scenes</span><span>Natural sound effects only · {totalDuration} seconds</span></div></div>
             </div>
           </div>
 
