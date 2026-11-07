@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import type { Motion, PoseKeyframe } from "../core/model";
+import type { Motion, PoseKeyframe, Transform3D } from "../core/model";
 import { evaluatePose, evaluateProceduralMotion } from "../core/animation";
 import { getPlaybackTime } from "../core/playback";
 
@@ -12,7 +12,18 @@ function Bone({ length, radius, color }: { length: number; radius: number; color
   </mesh>;
 }
 
-export default function Stickman({ color, motion, durationSeconds, keyframes = [] }: { color: string; motion: Motion; durationSeconds: number; keyframes?: PoseKeyframe[] }) {
+function applyRootTransform(root: THREE.Group | null, animatedPosition: [number, number, number], transform: Transform3D) {
+  if (!root) return;
+  root.position.set(
+    animatedPosition[0] + transform.position[0],
+    animatedPosition[1] + transform.position[1],
+    animatedPosition[2] + transform.position[2],
+  );
+  root.rotation.set(...transform.rotation);
+  root.scale.set(...transform.scale);
+}
+
+export default function Stickman({ color, motion, durationSeconds, keyframes = [], transform = { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] } }: { color: string; motion: Motion; durationSeconds: number; keyframes?: PoseKeyframe[]; transform?: Transform3D }) {
   const root = useRef<THREE.Group>(null);
   const leftArm = useRef<THREE.Group>(null);
   const rightArm = useRef<THREE.Group>(null);
@@ -23,7 +34,7 @@ export default function Stickman({ color, motion, durationSeconds, keyframes = [
   useFrame(() => {
     if (keyframes.length > 0) {
       const pose = evaluatePose(keyframes, getPlaybackTime());
-      root.current?.position.set(...pose.rootPosition);
+      applyRootTransform(root.current, pose.rootPosition, transform);
       leftArm.current?.rotation.set(...pose.leftArmRotation);
       rightArm.current?.rotation.set(...pose.rightArmRotation);
       leftLeg.current?.rotation.set(...pose.leftLegRotation);
@@ -32,14 +43,13 @@ export default function Stickman({ color, motion, durationSeconds, keyframes = [
     }
     // Clear the previous keyed pose before evaluating procedural motion.
     // This prevents stale root offsets and joint rotations after keyframes are removed.
-    root.current?.position.set(0, 0, 0);
     leftArm.current?.rotation.set(0, 0, 0);
     rightArm.current?.rotation.set(0, 0, 0);
     leftLeg.current?.rotation.set(0, 0, 0);
     rightLeg.current?.rotation.set(0, 0, 0);
     const t = getPlaybackTime();
     const pose = evaluateProceduralMotion(motion, t, durationSeconds);
-    root.current?.position.set(...pose.rootPosition);
+    applyRootTransform(root.current, pose.rootPosition, transform);
     if (leftLeg.current) leftLeg.current.rotation.x = pose.legSwing;
     if (rightLeg.current) rightLeg.current.rotation.x = -pose.legSwing;
     if (leftArm.current) leftArm.current.rotation.x = -pose.armSwing;
