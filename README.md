@@ -15,10 +15,13 @@ The `development` branch is the active engineering branch. The active editor she
 - `src/core/model.ts` — strict runtime validation for imported project files and their scenes, transforms, keyframes, and sound cues.
 - `src/core/model.test.ts` — project import validation tests.
 - `src/core/sound.ts` — local Web Audio synthesis and scene-local sound cue scheduling.
+- `src/core/subtitles.ts` — project-wide SRT and WebVTT serialization with scene-duration offsets.
+- `src/core/subtitles.test.ts` — subtitle export tests covering timestamps, Arabic text, scene offsets, sorting, and empty projects.
 - `src/core/sound.test.ts` — sound cue crossing, time-zero, chronological ordering, and backward-seek tests.
 - `src/core/playback.ts` — external animation clock so Three.js can read playback time without forcing a full React editor render on every frame.
 - `src/core/storage.ts` — IndexedDB project repository with save, load, list, and delete operations.
 - Project transfer — import and export versioned `.stickmotion.json` files from the editor.
+- Subtitle editing — edit caption text and scene-local start/end times, preview cues, and export project-wide `.srt` or `.vtt` files.
 
 ## Product principles
 
@@ -57,7 +60,7 @@ GitHub Actions is configured to install dependencies, run TypeScript checks, and
 
 ## Current limitations
 
-The application is not yet a production release. The story planner is rule-based rather than generative AI. The character supports procedural motions and editable full-body pose keyframes for both arms, both legs, and the root transform, with linear and eased interpolation. Scene-local natural sound cues can be previewed, edited, and triggered during forward timeline playback. Projects can be saved locally and transferred as validated JSON files. Camera keyframe tracks, audio/video export synchronization, and complete MP4 export are still under development. These limitations will be removed milestone by milestone and verified before release.
+The application is not yet a production release. The story planner is rule-based rather than generative AI. The character supports procedural motions and editable full-body pose keyframes for both arms, both legs, and the root transform, with linear and eased interpolation. Scene-local natural sound cues can be previewed, edited, and triggered during forward timeline playback. Projects can be saved locally and transferred as validated JSON files. Camera keyframe tracks, muxing subtitle/audio tracks into the final video, and complete MP4 export are still under development. These limitations will be removed milestone by milestone and verified before release.
 
 ## Roadmap
 
