@@ -24,10 +24,10 @@ export function splitStoryIntoBeats(story: string, limit = 12): StoryBeat[] {
   if (/\b(walk|walks|walking|walked|enter|enters|entering|leave|leaves|approach|approaches|step|steps|travel|travels)\b|يمشي|تمشي|المشي|مشى|يدخل|تدخل|يخرج|تخرج|يقترب|تقترب|يتقدم|تتقدم/.test(value)) return "walk";
 function inferMotion(text: string): Motion {
   const value = text.toLocaleLowerCase();
-  if (/\b(run|running|rush|chase|sprint)\b|يركض|يجري|ركض|بسرعة|يهرب/.test(value)) return "run";
-  if (/\b(jump|leap|hop|surprise|fall)\b|يقفز|قفز|يسقط|يتفاجأ|مندهش/.test(value)) return "jump";
-  if (/\b(wave|hello|greet|goodbye|bye)\b|يلوّح|يلوح|يحيي|مرحبا|وداعا/.test(value)) return "wave";
-  if (/\b(walk|enter|leave|approach|step|travel)\b|يمشي|يدخل|يخرج|يقترب|يتقدم/.test(value)) return "walk";
+  if (/\\b(run|runs|running|rushed|rush|chase|chases|sprint|sprints)\\b|يركض|يجري|ركض|بسرعة|يهرب/.test(value)) return "run";
+  if (/\\b(jump|jumps|jumping|leap|leaps|hop|hops|surprise|surprised|fall|falls|falling)\\b|يقفز|قفز|يسقط|يتفاجأ|مندهش/.test(value)) return "jump";
+  if (/\\b(wave|waves|waving|hello|greet|greets|greeting|goodbye|bye)\\b|يلوّح|يلوح|تلوح|تلوّح|يحيي|مرحبا|وداعا/.test(value)) return "wave";
+  if (/\\b(walk|walks|walking|walked|enter|enters|entering|leave|leaves|approach|approaches|step|steps|travel|travels)\\b|يمشي|تمشي|المشي|مشى|يدخل|تدخل|يخرج|تخرج|يقترب|تقترب|يتقدم|تتقدم/.test(value)) return "walk";
   return "idle";
 }
 
