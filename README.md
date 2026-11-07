@@ -10,6 +10,8 @@ The `development` branch is the active engineering branch. The active editor she
 
 - `src/core/model.ts` — versioned project, character, scene, transform, and sound data contracts.
 - `src/core/storyboard.ts` — deterministic offline story-to-scene planner. This is explicitly rule-based, not a hosted AI model.
+- `src/core/animation.ts` — pose keyframe creation and linear interpolation across character joints.
+- `src/core/animation.test.ts` — unit tests for keyframe boundary and interpolation behavior.
 - `src/core/storage.ts` — IndexedDB project repository with save, load, list, and delete operations.
 
 ## Product principles
@@ -55,7 +57,7 @@ The early prototype is not yet a production release. The story planner is rule-b
 
 1. Stabilize the project model and local persistence.
 2. Integrate the canonical model into the editor and add project management.
-3. Build a rigged character and deterministic animation/keyframe system.
+3. Expand the procedural character rig and keyframe editor with per-joint controls.
 4. Implement multi-scene playback, camera controls, and a real timeline.
 5. Add story planning with editable scene/action/camera suggestions.
 6. Synchronize natural sound effects and subtitles.
