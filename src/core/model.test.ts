@@ -23,6 +23,18 @@ describe("animation project validation", () => {
     expect(isAnimationProject(malformed)).toBe(false);
   });
 
+  it("rejects subtitle cues outside the scene duration", () => {
+    const project = createProject();
+    const malformed = { ...project, scenes: [{ ...project.scenes[0], subtitles: [{ id: "late", text: "Hello", startSeconds: 3, endSeconds: 9 }] }] };
+    expect(isAnimationProject(malformed)).toBe(false);
+  });
+
+  it("accepts valid bilingual subtitle cues", () => {
+    const project = createProject();
+    const valid = { ...project, scenes: [{ ...project.scenes[0], subtitles: [{ id: "sub", text: "Hello / مرحباً", startSeconds: 0.5, endSeconds: 2 }] }] };
+    expect(isAnimationProject(valid)).toBe(true);
+  });
+
   it("rejects unsupported schema versions", () => {
     const project = createProject();
     expect(isAnimationProject({ ...project, schemaVersion: 99 })).toBe(false);
