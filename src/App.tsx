@@ -20,6 +20,7 @@ export default function App() {
   const [keyframeTime, setKeyframeTime] = useState(0);
   const [keyframeArmAngle, setKeyframeArmAngle] = useState(0);
   const [keyframeRootHeight, setKeyframeRootHeight] = useState(0);
+  const [selectedKeyframeId, setSelectedKeyframeId] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [message, setMessage] = useState("Local workspace ready");
   const [recentProjects, setRecentProjects] = useState<AnimationProject[]>([]);
@@ -112,7 +113,25 @@ export default function App() {
     const pose: EvaluatedPose = { rootPosition: [0, keyframeRootHeight, 0], leftArmRotation: [0, 0, arm], rightArmRotation: [0, 0, -arm], leftLegRotation: [0, 0, 0], rightLegRotation: [0, 0, 0] };
     const frame = createPoseKeyframe(keyframeTime, pose);
     updateScene({ keyframes: [...(activeScene.keyframes ?? []).filter((item) => Math.abs(item.atSeconds - keyframeTime) > 0.001), frame].sort((a, b) => a.atSeconds - b.atSeconds) });
+    setSelectedKeyframeId(frame.id);
+    setPlayhead(keyframeTime);
     setMessage("Keyframe added at " + keyframeTime.toFixed(1) + "s");
+  }
+
+  function selectKeyframe(frame: NonNullable<AnimationScene["keyframes"]>[number]) {
+    setSelectedKeyframeId(frame.id);
+    setKeyframeTime(frame.atSeconds);
+    setPlayhead(frame.atSeconds);
+    setKeyframeArmAngle(Math.round(frame.leftArmRotation[2] * 180 / Math.PI));
+    setKeyframeRootHeight(frame.rootPosition[1]);
+  }
+
+  function removeKeyframe() {
+    if (!activeScene || !selectedKeyframeId) return;
+    const remaining = (activeScene.keyframes ?? []).filter((frame) => frame.id !== selectedKeyframeId);
+    updateScene({ keyframes: remaining });
+    setSelectedKeyframeId(remaining[0]?.id ?? null);
+    setMessage("Keyframe deleted");
   }
 
   function removeScene() {
@@ -174,7 +193,7 @@ export default function App() {
               <div className="timeline-track">
                 {project.scenes.map((scene, index) => <button key={scene.id} className={scene.id === activeSceneId ? "scene-card selected" : "scene-card"} style={{ flex: Math.max(1, scene.durationSeconds) }} onClick={() => setActiveSceneId(scene.id)}><small>{String(index + 1).padStart(2, "0")} · {scene.durationSeconds}s</small><strong>{scene.name}</strong><span>{scene.motion}</span></button>)}
               </div>
-              <div className="keyframe-tools"><div><label className="field-label">KEYFRAME TIME <b>{keyframeTime.toFixed(1)}s</b></label><input aria-label="Keyframe time" className="duration-range" type="range" min="0" max={Math.max(0.1, activeScene?.durationSeconds ?? 4)} step="0.1" value={Math.min(keyframeTime, activeScene?.durationSeconds ?? 4)} onChange={(event) => setKeyframeTime(Number(event.target.value))}/></div><div className="keyframe-pose"><label className="field-label">ARM ANGLE <b>{keyframeArmAngle}°</b></label><input className="duration-range" type="range" min="-150" max="150" step="5" value={keyframeArmAngle} onChange={(event) => setKeyframeArmAngle(Number(event.target.value))}/><label className="field-label">ROOT HEIGHT <b>{keyframeRootHeight.toFixed(1)}</b></label><input className="duration-range" type="range" min="0" max="2" step="0.1" value={keyframeRootHeight} onChange={(event) => setKeyframeRootHeight(Number(event.target.value))}/></div><button className="add-button" onClick={addKeyframe}><Plus size={14}/> Add keyframe</button><span>{activeScene?.keyframes?.length ?? 0} keyframes</span></div><div className="playhead-control"><label className="field-label">PLAYHEAD <b>{playhead.toFixed(1)}s</b></label><input aria-label="Timeline playhead" className="duration-range" type="range" min="0" max={activeScene?.durationSeconds ?? 4} step="0.05" value={Math.min(playhead, activeScene?.durationSeconds ?? 4)} onChange={(event) => { setPlaying(false); setPlayhead(Number(event.target.value)); }}/><div className="timeline-foot"><span>{project.scenes.length} scenes</span><span>Natural sound effects only · {totalDuration} seconds</span></div></div>
+              <div className="keyframe-tools"><div><label className="field-label">KEYFRAME TIME <b>{keyframeTime.toFixed(1)}s</b></label><input aria-label="Keyframe time" className="duration-range" type="range" min="0" max={Math.max(0.1, activeScene?.durationSeconds ?? 4)} step="0.1" value={Math.min(keyframeTime, activeScene?.durationSeconds ?? 4)} onChange={(event) => setKeyframeTime(Number(event.target.value))}/></div><div className="keyframe-pose"><label className="field-label">ARM ANGLE <b>{keyframeArmAngle}°</b></label><input className="duration-range" type="range" min="-150" max="150" step="5" value={keyframeArmAngle} onChange={(event) => setKeyframeArmAngle(Number(event.target.value))}/><label className="field-label">ROOT HEIGHT <b>{keyframeRootHeight.toFixed(1)}</b></label><input className="duration-range" type="range" min="0" max="2" step="0.1" value={keyframeRootHeight} onChange={(event) => setKeyframeRootHeight(Number(event.target.value))}/></div><div className="keyframe-actions"><button className="add-button" onClick={addKeyframe}><Plus size={14}/> Add keyframe</button><button className="delete-keyframe" onClick={removeKeyframe} disabled={!selectedKeyframeId}><Trash2 size={13}/> Delete</button></div><span>{activeScene?.keyframes?.length ?? 0} keyframes</span></div><div className="keyframe-list">{(activeScene?.keyframes ?? []).map((frame, index) => <button key={frame.id} className={selectedKeyframeId === frame.id ? "keyframe-chip selected" : "keyframe-chip"} onClick={() => selectKeyframe(frame)}>{String(index + 1).padStart(2, "0")} · {frame.atSeconds.toFixed(1)}s</button>)}</div><div className="playhead-control"><label className="field-label">PLAYHEAD <b>{playhead.toFixed(1)}s</b></label><input aria-label="Timeline playhead" className="duration-range" type="range" min="0" max={activeScene?.durationSeconds ?? 4} step="0.05" value={Math.min(playhead, activeScene?.durationSeconds ?? 4)} onChange={(event) => { setPlaying(false); setPlayhead(Number(event.target.value)); }}/><div className="timeline-foot"><span>{project.scenes.length} scenes</span><span>Natural sound effects only · {totalDuration} seconds</span></div></div>
             </div>
           </div>
 
