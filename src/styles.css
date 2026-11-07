@@ -12,3 +12,6 @@
 .keyframe-easing{display:flex;flex-direction:column;gap:5px;min-width:135px}.keyframe-easing .field-label{margin:0}.keyframe-easing small{font-size:8px;line-height:1.45;color:#8790a8}.keyframe-easing select{font-size:10px;padding:7px}
 
 .cue-time-range{width:100%;max-width:190px;margin-top:3px}
+
+
+.file-input-hidden{display:none}.top-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.transfer-button{background:#20263a;border-color:#343b53;color:#c8cde0}.transfer-button:hover{border-color:#8173d8;color:#eeeaff}@media(max-width:560px){.top-actions{gap:5px}.transfer-button,.top-actions .save-button{padding:7px 8px;font-size:9px}}
