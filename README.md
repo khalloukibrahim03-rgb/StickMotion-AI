@@ -11,7 +11,7 @@ The `development` branch is the active engineering branch. The active editor she
 - `src/core/model.ts` — versioned project, character, scene, transform, and sound data contracts.
 - `src/core/storyboard.ts` — offline prompt-to-storyboard planner with English/Arabic action recognition, editable scene beats, cinematic camera framing/moves, and motion-matched natural sound cues. This is deterministic planning, not a hosted generative AI model.
 - `src/core/render.ts` — deterministic 30 FPS render schedule for scene sequences.
-- Browser export currently records the live 3D viewport to WebM (up to 90 seconds). It is a silent visual preview export: MP4 encoding, embedded subtitle compositing, and mixed audio are not implemented yet.
+- Browser export currently records the 3D viewport to WebM at 30 FPS (up to 90 seconds), composites timed subtitles into the frames, and mixes the project's synthesized natural sound cues when browser audio capture is available. MP4/H.264 encoding and a full offline frame renderer are still future work.
 - `src/core/animation.ts` — pose keyframe creation, interpolation, and linear/ease-in/ease-out/ease-in-out curves.
 - `src/core/animation.test.ts` — unit tests for keyframe boundaries, interpolation, and easing.
 - `src/core/model.ts` — strict runtime validation for imported project files and their scenes, transforms, keyframes, and sound cues.
