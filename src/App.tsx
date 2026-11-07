@@ -242,12 +242,20 @@ export default function App() {
     const chunks: BlobPart[] = [];
     let stream: MediaStream | null = null;
     let recorder: MediaRecorder | null = null;
+    const compositeCanvas = document.createElement("canvas");
+    compositeCanvas.width = canvas.width;
+    compositeCanvas.height = canvas.height;
+    const compositeContext = compositeCanvas.getContext("2d");
+    if (!compositeContext) {
+      setMessage("Could not create the video compositing surface");
+      return;
+    }
     renderCancelRef.current = false;
     setRendering(true);
     setRenderProgress(0);
     setPlaying(false);
     try {
-      stream = canvas.captureStream(30);
+      stream = compositeCanvas.captureStream(30);
       recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
       recorder.ondataavailable = (event) => { if (event.data.size > 0) chunks.push(event.data); };
       const stopped = new Promise<void>((resolve, reject) => {
@@ -256,15 +264,55 @@ export default function App() {
         recorder.onstop = () => resolve();
       });
       recorder.start(500);
+      let renderedSceneId = previousSceneId;
       for (let index = 0; index < schedule.length; index += 1) {
         if (renderCancelRef.current) break;
         const frame = schedule[index];
         const scene = project.scenes[frame.sceneIndex];
-        if (scene.id !== activeSceneId) setActiveSceneId(scene.id);
+        if (scene.id !== renderedSceneId) {
+          setActiveSceneId(scene.id);
+          renderedSceneId = scene.id;
+        }
         setPlaybackTime(frame.sceneTime);
         setPlayhead(frame.sceneTime);
         // Give React Three Fiber a paint opportunity before capturing the next frame.
         await new Promise<void>((resolve) => window.setTimeout(resolve, 1000 / 30));
+        compositeContext.clearRect(0, 0, compositeCanvas.width, compositeCanvas.height);
+        compositeContext.drawImage(canvas, 0, 0, compositeCanvas.width, compositeCanvas.height);
+        const activeCues = (scene.subtitles ?? []).filter((cue) => frame.sceneTime >= cue.startSeconds && frame.sceneTime < cue.endSeconds);
+        if (activeCues.length) {
+          const width = compositeCanvas.width;
+          const height = compositeCanvas.height;
+          const fontSize = Math.max(18, Math.round(width * 0.027));
+          compositeContext.font = "600 " + fontSize + "px Arial, sans-serif";
+          compositeContext.textAlign = "center";
+          compositeContext.textBaseline = "middle";
+          for (const cue of activeCues) {
+            const words = cue.text.split(/\\s+/);
+            const lines: string[] = [];
+            let line = "";
+            for (const word of words) {
+              const candidate = line ? line + " " + word : word;
+              if (line && compositeContext.measureText(candidate).width > width * 0.82) {
+                lines.push(line);
+                line = word;
+              } else line = candidate;
+            }
+            if (line) lines.push(line);
+            const lineHeight = fontSize * 1.35;
+            const blockHeight = lines.length * lineHeight + fontSize * 0.8;
+            const centerY = height - blockHeight * 0.72;
+            const maxLineWidth = Math.max(...lines.map((item) => compositeContext.measureText(item).width));
+            const boxWidth = Math.min(width * 0.9, maxLineWidth + fontSize * 1.8);
+            compositeContext.fillStyle = "rgba(8, 11, 20, 0.84)";
+            compositeContext.beginPath();
+            compositeContext.roundRect((width - boxWidth) / 2, centerY - blockHeight / 2, boxWidth, blockHeight, fontSize * 0.35);
+            compositeContext.fill();
+            compositeContext.fillStyle = "#ffffff";
+            compositeContext.direction = /[\\u0600-\\u06FF]/.test(cue.text) ? "rtl" : "ltr";
+            lines.forEach((item, lineIndex) => compositeContext.fillText(item, width / 2, centerY - ((lines.length - 1) * lineHeight) / 2 + lineIndex * lineHeight, width * 0.84));
+          }
+        }
         if (index % 5 === 0 || index === schedule.length - 1) {
           setRenderProgress(Math.round(((index + 1) / schedule.length) * 100));
         }
