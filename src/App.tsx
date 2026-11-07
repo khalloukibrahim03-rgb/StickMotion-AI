@@ -18,6 +18,7 @@ export default function App() {
   const [project, setProject] = useState<AnimationProject>(() => createProject());
   const importInput = useRef<HTMLInputElement>(null);
   const [activeSceneId, setActiveSceneId] = useState(project.scenes[0].id);
+  const [subtitleDraft, setSubtitleDraft] = useState("");
   const [story, setStory] = useState("A curious stickman walks into a quiet room. It notices a strange object and jumps in surprise. Then it waves hello.");
   const [playing, setPlaying] = useState(true);
   const [playhead, setPlayhead] = useState(0);
@@ -100,6 +101,17 @@ export default function App() {
     updateProject({
       scenes: project.scenes.map((scene) => scene.id === activeSceneId ? { ...scene, ...patch } : scene),
     });
+  }
+
+
+  function addSubtitleCue() {
+    const text = subtitleDraft.trim();
+    if (!text || !activeScene) return;
+    const startSeconds = Math.min(playhead, Math.max(0, activeScene.durationSeconds - 0.25));
+    const endSeconds = Math.min(activeScene.durationSeconds, startSeconds + 2.5);
+    updateScene({ subtitles: [...(activeScene.subtitles ?? []), { id: "sub_" + Math.random().toString(36).slice(2,10), text, startSeconds, endSeconds }] });
+    setSubtitleDraft("");
+    setMessage("Subtitle added to scene at " + startSeconds.toFixed(2) + "s");
   }
 
   function addScene() {
@@ -314,7 +326,7 @@ export default function App() {
                   <ContactShadows position={[0, -0.045, 0]} opacity={0.38} scale={5} blur={2.4} far={2}/>
                   <OrbitControls target={cameraSettings.target} minDistance={3} maxDistance={12} maxPolarAngle={Math.PI / 2.02}/>
                 </Canvas>
-                <div className="viewport-caption">{activeScene?.name ?? "No scene"} · {(activeScene?.motion ?? "idle").toUpperCase()}</div>
+                <div className="viewport-caption">{activeScene?.name ?? "No scene"} · {(activeScene?.motion ?? "idle").toUpperCase()}</div>{(activeScene?.subtitles ?? []).filter((cue) => playhead >= cue.startSeconds && playhead < cue.endSeconds).map((cue) => <div className="subtitle-preview" key={cue.id}>{cue.text}</div>)}
               </div>
               <div className="viewport-controls"><div>SCENE {String(Math.max(1, project.scenes.findIndex((scene) => scene.id === activeSceneId) + 1)).padStart(2, "0")} / {String(project.scenes.length).padStart(2, "0")}</div><button className="play-button" onClick={() => { if (!playing) void unlockAudio(); setPlaying((value) => !value); }}>{playing ? <Pause size={16}/> : <Play size={16}/>} {playing ? "Pause" : "Play"}</button><div>{playhead.toFixed(1)}s / {activeScene?.durationSeconds ?? 4}s · {totalDuration}s total</div></div>
             </div>
@@ -353,6 +365,7 @@ export default function App() {
               </div>
             </section>
             <section className="inspector-section sound-section"><div className="section-heading"><h3><Volume2 size={15}/> Natural sound effects</h3><span className="beta-tag">SFX</span></div><p>Place short sound cues on this scene. Audio is synthesized locally; no music is included.</p><label className="field-label">EFFECT</label><select className="text-input" value={soundEffect} onChange={(event) => setSoundEffect(event.target.value as SceneSound["effect"])}>{(Object.keys(soundEffectLabels) as SceneSound["effect"][]).map((effect) => <option key={effect} value={effect}>{soundEffectLabels[effect]}</option>)}</select><label className="field-label">VOLUME <b>{Math.round(soundVolume * 100)}%</b></label><input aria-label="Sound effect volume" className="duration-range" type="range" min="0" max="1" step="0.05" value={soundVolume} onChange={(event) => setSoundVolume(Number(event.target.value))}/><div className="sound-actions"><button className="add-button" onClick={() => void previewSound()}><Play size={13}/> Preview</button><button className="generate-button" onClick={addSoundCue}><Plus size={14}/> Add cue at {keyframeTime.toFixed(1)}s</button></div><div className="sound-cue-list">{(activeScene?.sounds ?? []).map((cue) => <div className="sound-cue" key={cue.id}><span><strong>{soundEffectLabels[cue.effect]}</strong><small>{cue.atSeconds.toFixed(1)}s · {Math.round(cue.volume * 100)}%</small><input aria-label={"Move " + soundEffectLabels[cue.effect] + " cue time"} className="duration-range cue-time-range" type="range" min="0" max={activeScene?.durationSeconds ?? 4} step="0.05" value={Math.min(cue.atSeconds, activeScene?.durationSeconds ?? 4)} onChange={(event) => updateSoundCueTime(cue.id, Number(event.target.value))}/></span><button className="icon-action" aria-label={"Delete " + soundEffectLabels[cue.effect]} onClick={() => removeSoundCue(cue.id)}><Trash2 size={14}/></button></div>)}{(activeScene?.sounds ?? []).length === 0 && <small className="empty-projects">No sound cues in this scene yet.</small>}</div></section>
+            <section className="inspector-section subtitle-section"><div className="section-heading"><h3>Subtitles</h3><span className="beta-tag">LOCAL</span></div><p>Add timed captions in Arabic or English. Preview them at the current playhead.</p><textarea className="description-input" rows={2} maxLength={500} value={subtitleDraft} onChange={(event) => setSubtitleDraft(event.target.value)} placeholder="Type a caption / اكتب الترجمة هنا..."/><button className="generate-button" disabled={!subtitleDraft.trim()} onClick={addSubtitleCue}><Plus size={14}/> Add subtitle at {playhead.toFixed(1)}s</button><div className="subtitle-cue-list">{(activeScene?.subtitles ?? []).map((cue) => <div className="subtitle-cue" key={cue.id}><span><strong>{cue.text}</strong><small>{cue.startSeconds.toFixed(1)}–{cue.endSeconds.toFixed(1)}s</small></span><button className="icon-action" aria-label="Delete subtitle" onClick={() => updateScene({subtitles:(activeScene?.subtitles ?? []).filter((item)=>item.id!==cue.id)})}><Trash2 size={13}/></button></div>)}{!(activeScene?.subtitles?.length) && <small className="empty-projects">No subtitles in this scene yet.</small>}</div></section>
             <section className="inspector-section story-section"><div className="section-heading"><h3>Story builder</h3><span className="beta-tag">OFFLINE</span></div><p>Turn a short story into editable scenes. Motion suggestions use local rules, not a generative AI model.</p><textarea className="story-input" rows={5} value={story} onChange={(event) => setStory(event.target.value)} placeholder="Describe your animation..."/><button className="generate-button" onClick={generateStory}><Sparkles size={15}/> Generate scenes</button></section>
             <div className="inspector-status"><i/> {message}</div>
           </aside>
