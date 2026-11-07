@@ -254,8 +254,10 @@ export default function App() {
     let stream: MediaStream | null = null;
     let recorder: MediaRecorder | null = null;
     const compositeCanvas = document.createElement("canvas");
-    compositeCanvas.width = canvas.width;
-    compositeCanvas.height = canvas.height;
+    // Export a standard HD frame size regardless of the editor panel's dimensions.
+    compositeCanvas.width = 1280;
+    compositeCanvas.height = 720;
+    const previousCameraAspect = liveCameraRef.current?.aspect;
     const compositeContext = compositeCanvas.getContext("2d");
     if (!compositeContext) {
       setMessage("Could not create the video compositing surface");
@@ -266,6 +268,10 @@ export default function App() {
     setRenderProgress(0);
     setPlaying(false);
     try {
+      if (liveCameraRef.current) {
+        liveCameraRef.current.aspect = 16 / 9;
+        liveCameraRef.current.updateProjectionMatrix();
+      }
       let videoStream = compositeCanvas.captureStream(0);
       let manualVideoTrack = videoStream.getVideoTracks()[0] as (MediaStreamTrack & { requestFrame?: () => void }) | undefined;
       if (typeof manualVideoTrack?.requestFrame !== "function") {
@@ -387,6 +393,11 @@ export default function App() {
     } finally {
       stream?.getTracks().forEach((track) => track.stop());
       endAudioCapture();
+      if (liveCameraRef.current && previousCameraAspect !== undefined) {
+        liveCameraRef.current.aspect = previousCameraAspect;
+        liveCameraRef.current.updateProjectionMatrix();
+        if (liveRendererRef.current && liveSceneRef.current) liveRendererRef.current.render(liveSceneRef.current, liveCameraRef.current);
+      }
       setActiveSceneId(previousSceneId);
       setPlaybackTime(previousTime);
       setPlayhead(previousTime);
@@ -584,7 +595,7 @@ export default function App() {
             <div className="viewport-card">
               <div className="viewport-top"><span>3D VIEWPORT <i/> LIVE PREVIEW</span><span>Perspective · Orbit to inspect</span></div>
               <div className="viewport">
-                <Canvas shadows gl={{ preserveDrawingBuffer: true }} camera={{ position: cameraSettings.position, fov: cameraSettings.fov }} onCreated={({ camera, gl, scene }) => { if (camera instanceof THREE.PerspectiveCamera) liveCameraRef.current = camera; liveRendererRef.current = gl; liveSceneRef.current = scene; }}>
+                <Canvas shadows dpr={2} gl={{ preserveDrawingBuffer: true }} camera={{ position: cameraSettings.position, fov: cameraSettings.fov }} onCreated={({ camera, gl, scene }) => { if (camera instanceof THREE.PerspectiveCamera) liveCameraRef.current = camera; liveRendererRef.current = gl; liveSceneRef.current = scene; }}>
                   <EnvironmentStage environment={activeScene?.environment ?? "studio"}/>
                   <SceneProps props={activeScene?.props ?? []}/>
                   <ambientLight intensity={activeScene?.environment === "night" ? 0.48 : activeScene?.environment === "nature" ? 0.88 : 0.75}/>
