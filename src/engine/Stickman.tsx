@@ -52,7 +52,10 @@ export default function Stickman({ color, motion, durationSeconds, keyframes = [
     applyRootTransform(root.current, pose.rootPosition, transform);
     if (leftLeg.current) leftLeg.current.rotation.x = pose.legSwing;
     if (rightLeg.current) rightLeg.current.rotation.x = -pose.legSwing;
-    if (leftArm.current) leftArm.current.rotation.x = -pose.armSwing;
+    if (leftArm.current) {
+      leftArm.current.rotation.x = -pose.armSwing;
+      leftArm.current.rotation.z = pose.leftArmRotationZ;
+    }
     if (rightArm.current) {
       rightArm.current.rotation.x = pose.armSwing;
       // A direct time-based value keeps preview scrubbing and exported frames deterministic.
