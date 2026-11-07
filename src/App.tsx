@@ -269,8 +269,9 @@ export default function App() {
         videoStream = compositeCanvas.captureStream(30);
         manualVideoTrack = undefined;
       }
-      await unlockAudio();
-      const audioStream = beginAudioCapture();
+      const audioUnlocked = await unlockAudio();
+      const audioStream = audioUnlocked ? beginAudioCapture() : null;
+      const hasCapturedAudio = Boolean(audioStream?.getAudioTracks().length);
       stream = new MediaStream([...videoStream.getVideoTracks(), ...(audioStream?.getAudioTracks() ?? [])]);
       recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
       recorder.ondataavailable = (event) => { if (event.data.size > 0) chunks.push(event.data); };
@@ -359,7 +360,7 @@ export default function App() {
         anchor.download = safeTitle + ".webm";
         anchor.click();
         window.setTimeout(() => URL.revokeObjectURL(url), 30000);
-        setMessage("Video exported as WebM · 30 FPS · timed subtitles and natural sound effects");
+        setMessage("Video exported as WebM · 30 FPS · timed subtitles" + (hasCapturedAudio ? " · natural sound effects included" : " · browser audio capture unavailable"));
       } else {
         setMessage("Video render cancelled");
       }
