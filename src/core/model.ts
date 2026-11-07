@@ -101,13 +101,79 @@ export function createProject(title = "Untitled animation"): AnimationProject {
   };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isVector3(value: unknown): value is [number, number, number] {
+  return Array.isArray(value) && value.length === 3 && value.every((part) => typeof part === "number" && Number.isFinite(part));
+}
+
+const motions: Motion[] = ["idle", "walk", "run", "jump", "wave"];
+const environments: EnvironmentPreset[] = ["studio", "night", "nature"];
+const soundEffects: SceneSound["effect"][] = ["footstep", "whoosh", "landing", "rain", "wind"];
+const easingCurves: EasingCurve[] = ["linear", "ease-in", "ease-out", "ease-in-out"];
+
+function isSceneSound(value: unknown, duration: number): value is SceneSound {
+  if (!isRecord(value)) return false;
+  return typeof value.id === "string"
+    && soundEffects.includes(value.effect as SceneSound["effect"])
+    && typeof value.atSeconds === "number"
+    && Number.isFinite(value.atSeconds)
+    && value.atSeconds >= 0
+    && value.atSeconds <= duration
+    && typeof value.volume === "number"
+    && Number.isFinite(value.volume)
+    && value.volume >= 0
+    && value.volume <= 1;
+}
+
+function isPoseKeyframe(value: unknown, duration: number): value is PoseKeyframe {
+  if (!isRecord(value)) return false;
+  return typeof value.id === "string"
+    && typeof value.atSeconds === "number"
+    && Number.isFinite(value.atSeconds)
+    && value.atSeconds >= 0
+    && value.atSeconds <= duration
+    && (value.easing === undefined || easingCurves.includes(value.easing as EasingCurve))
+    && isVector3(value.rootPosition)
+    && isVector3(value.leftArmRotation)
+    && isVector3(value.rightArmRotation)
+    && isVector3(value.leftLegRotation)
+    && isVector3(value.rightLegRotation);
+}
+
+function isAnimationScene(value: unknown): value is AnimationScene {
+  if (!isRecord(value) || !isRecord(value.characterTransform)) return false;
+  const duration = value.durationSeconds;
+  if (typeof duration !== "number" || !Number.isFinite(duration) || duration <= 0) return false;
+  const transform = value.characterTransform;
+  return typeof value.id === "string"
+    && typeof value.name === "string"
+    && typeof value.description === "string"
+    && motions.includes(value.motion as Motion)
+    && environments.includes(value.environment as EnvironmentPreset)
+    && isVector3(transform.position)
+    && isVector3(transform.rotation)
+    && isVector3(transform.scale)
+    && Array.isArray(value.sounds)
+    && value.sounds.every((sound) => isSceneSound(sound, duration))
+    && (value.keyframes === undefined || (Array.isArray(value.keyframes) && value.keyframes.every((frame) => isPoseKeyframe(frame, duration)));
+}
+
 export function isAnimationProject(value: unknown): value is AnimationProject {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as Partial<AnimationProject>;
-  return candidate.schemaVersion === PROJECT_SCHEMA_VERSION
-    && typeof candidate.id === "string"
-    && typeof candidate.title === "string"
-    && Array.isArray(candidate.scenes)
-    && !!candidate.character
-    && typeof candidate.character.primaryColor === "string";
+  if (!isRecord(value) || !isRecord(value.character)) return false;
+  const character = value.character;
+  return value.schemaVersion === PROJECT_SCHEMA_VERSION
+    && typeof value.id === "string"
+    && typeof value.title === "string"
+    && typeof value.createdAt === "string"
+    && typeof value.updatedAt === "string"
+    && typeof character.id === "string"
+    && typeof character.name === "string"
+    && typeof character.primaryColor === "string"
+    && typeof character.bodyColor === "string"
+    && Array.isArray(value.scenes)
+    && value.scenes.length > 0
+    && value.scenes.every(isAnimationScene);
 }
