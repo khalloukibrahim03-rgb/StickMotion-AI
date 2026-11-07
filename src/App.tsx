@@ -363,6 +363,9 @@ export default function App() {
           setRenderProgress(Math.round(((index + 1) / schedule.length) * 100));
         }
       }
+      // Give the final manually requested frame one more browser paint/encode turn
+      // before stopping MediaRecorder, so the last scene frame is not truncated.
+      await new Promise<void>((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve())));
       recorder.stop();
       await stopped;
       if (!renderCancelRef.current && chunks.length) {
