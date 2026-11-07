@@ -4,6 +4,7 @@ import { ContactShadows, Grid, OrbitControls } from "@react-three/drei";
 import { ChevronRight, Pause, Play, Plus, Save, Sparkles, Trash2 } from "lucide-react";
 import Stickman from "./engine/Stickman";
 import { buildStoryboard } from "./core/storyboard";
+import { createPoseKeyframe } from "./core/animation";
 import { createProject, createScene, type AnimationProject, type AnimationScene, type Motion } from "./core/model";
 import { listProjects, saveProject as persistProject } from "./core/storage";
 
@@ -14,6 +15,7 @@ export default function App() {
   const [activeSceneId, setActiveSceneId] = useState(project.scenes[0].id);
   const [story, setStory] = useState("A curious stickman walks into a quiet room. It notices a strange object and jumps in surprise. Then it waves hello.");
   const [playing, setPlaying] = useState(true);
+  const [keyframeTime, setKeyframeTime] = useState(0);
   const [saved, setSaved] = useState(false);
   const [message, setMessage] = useState("Local workspace ready");
   const [recentProjects, setRecentProjects] = useState<AnimationProject[]>([]);
@@ -76,6 +78,13 @@ export default function App() {
     setMessage("Opened " + found.title);
   }
 
+  function addKeyframe() {
+    if (!activeScene) return;
+    const frame = createPoseKeyframe(keyframeTime);
+    updateScene({ keyframes: [...(activeScene.keyframes ?? []).filter((item) => Math.abs(item.atSeconds - keyframeTime) > 0.001), frame].sort((a, b) => a.atSeconds - b.atSeconds) });
+    setMessage("Keyframe added at " + keyframeTime.toFixed(1) + "s");
+  }
+
   function removeScene() {
     if (project.scenes.length <= 1) {
       setMessage("A project must contain at least one scene");
@@ -121,7 +130,7 @@ export default function App() {
                   <directionalLight position={[4, 8, 5]} intensity={2.1} castShadow shadow-mapSize={[1024, 1024]}/>
                   <Grid position={[0, -0.03, 0]} args={[18, 18]} cellSize={0.5} cellColor="#343b52" sectionColor="#59627d" fadeDistance={20} infiniteGrid/>
                   <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.06, 0]} receiveShadow><planeGeometry args={[100, 100]}/><meshStandardMaterial color="#171c2b" roughness={0.95}/></mesh>
-                  <Stickman color={project.character.primaryColor} motion={activeScene?.motion ?? "idle"} playing={playing}/>
+                  <Stickman color={project.character.primaryColor} motion={activeScene?.motion ?? "idle"} playing={playing} keyframes={activeScene?.keyframes ?? []}/>
                   <ContactShadows position={[0, -0.045, 0]} opacity={0.38} scale={5} blur={2.4} far={2}/>
                   <OrbitControls target={[0, 1.1, 0]} minDistance={3} maxDistance={12} maxPolarAngle={Math.PI / 2.02}/>
                 </Canvas>
@@ -135,7 +144,7 @@ export default function App() {
               <div className="timeline-track">
                 {project.scenes.map((scene, index) => <button key={scene.id} className={scene.id === activeSceneId ? "scene-card selected" : "scene-card"} style={{ flex: Math.max(1, scene.durationSeconds) }} onClick={() => setActiveSceneId(scene.id)}><small>{String(index + 1).padStart(2, "0")} · {scene.durationSeconds}s</small><strong>{scene.name}</strong><span>{scene.motion}</span></button>)}
               </div>
-              <div className="timeline-foot"><span>{project.scenes.length} scenes</span><span>Natural sound effects only · {totalDuration} seconds</span></div>
+              <div className="keyframe-tools"><div><label className="field-label">KEYFRAME TIME <b>{keyframeTime.toFixed(1)}s</b></label><input aria-label="Keyframe time" className="duration-range" type="range" min="0" max={Math.max(0.1, activeScene?.durationSeconds ?? 4)} step="0.1" value={Math.min(keyframeTime, activeScene?.durationSeconds ?? 4)} onChange={(event) => setKeyframeTime(Number(event.target.value))}/></div><button className="add-button" onClick={addKeyframe}><Plus size={14}/> Add keyframe</button><span>{activeScene?.keyframes?.length ?? 0} keyframes</span></div><div className="timeline-foot"><span>{project.scenes.length} scenes</span><span>Natural sound effects only · {totalDuration} seconds</span></div>
             </div>
           </div>
 
