@@ -299,7 +299,12 @@ export default function App() {
         previousSceneTime = frame.sceneTime;
         setPlaybackTime(frame.sceneTime);
         setPlayhead(frame.sceneTime);
-        // Apply the camera synchronously: React state updates are not a reliable render clock.
+        // Wait for React and the R3F frame loop to apply the exact scene-local time.
+        await new Promise<void>((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+          const elapsed = window.performance.now() - frameStartedAt;
+          window.setTimeout(resolve, Math.max(0, 1000 / 30 - elapsed));
+        })));
+        // Apply the camera after scene effects have run, so a scene switch cannot overwrite this frame's camera.
         const frameCamera = frameState.camera;
         if (liveCameraRef.current) {
           liveCameraRef.current.position.set(...frameCamera.position);
@@ -308,11 +313,6 @@ export default function App() {
           liveCameraRef.current.updateProjectionMatrix();
         }
         orbitControlsRef.current?.target.set(...frameCamera.target);
-        // Wait for React and the R3F frame loop to apply the exact scene-local time.
-        await new Promise<void>((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
-          const elapsed = window.performance.now() - frameStartedAt;
-          window.setTimeout(resolve, Math.max(0, 1000 / 30 - elapsed));
-        })));
         compositeContext.clearRect(0, 0, compositeCanvas.width, compositeCanvas.height);
         compositeContext.drawImage(canvas, 0, 0, compositeCanvas.width, compositeCanvas.height);
         const activeCues = frameState.activeSubtitles;
@@ -579,7 +579,7 @@ export default function App() {
                   <directionalLight position={[4, 8, 5]} color={activeScene?.environment === "night" ? "#aab8ff" : activeScene?.environment === "nature" ? "#fff0cf" : "#ffffff"} intensity={activeScene?.environment === "night" ? 1.25 : 2.1} castShadow shadow-mapSize={[1024, 1024]}/>
                   {activeScene?.environment === "studio" && <Grid position={[0, -0.03, 0]} args={[18, 18]} cellSize={0.5} cellColor="#343b52" sectionColor="#59627d" fadeDistance={20} infiniteGrid/>}
                   <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.06, 0]} receiveShadow><planeGeometry args={[100, 100]}/><meshStandardMaterial color={activeScene?.environment === "nature" ? "#385a3b" : activeScene?.environment === "night" ? "#0c1022" : "#171c2b"} roughness={0.95}/></mesh>
-                  <Stickman color={project.character.primaryColor} motion={activeScene?.motion ?? "idle"} durationSeconds={activeScene?.durationSeconds ?? 4} keyframes={activeScene?.keyframes ?? []} transform={activeScene?.characterTransform}/>
+                  <Stickman color={project.character.primaryColor} motion={activeScene?.motion ?? "idle"} durationSeconds={activeScene?.durationSeconds ?? 4} keyframes={activeScene?.keyframes ?? []} transform={activeScene?.characterTransform} timeSeconds={rendering ? playhead : undefined}/>
                   <ContactShadows position={[0, -0.045, 0]} opacity={0.38} scale={5} blur={2.4} far={2}/>
                   <CameraAnimator settings={cameraSettings} animate={playing && !rendering && Boolean(activeScene?.cameraKeyframes?.length)} sceneId={activeSceneId}/><OrbitControls ref={(controls) => { orbitControlsRef.current = controls as unknown as { target: THREE.Vector3 } | null; }} enabled={!rendering && !(playing && Boolean(activeScene?.cameraKeyframes?.length))} target={cameraSettings.target} minDistance={3} maxDistance={12} maxPolarAngle={Math.PI / 2.02}/>
                 </Canvas>
