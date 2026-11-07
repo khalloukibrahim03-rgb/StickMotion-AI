@@ -5,6 +5,7 @@ import { ChevronRight, Pause, Play, Plus, Save, Sparkles, Trash2 } from "lucide-
 import Stickman from "./engine/Stickman";
 import { buildStoryboard } from "./core/storyboard";
 import { createPoseKeyframe } from "./core/animation";
+import type { EvaluatedPose } from "./core/animation";
 import { createProject, createScene, type AnimationProject, type AnimationScene, type Motion } from "./core/model";
 import { listProjects, saveProject as persistProject } from "./core/storage";
 
@@ -16,6 +17,8 @@ export default function App() {
   const [story, setStory] = useState("A curious stickman walks into a quiet room. It notices a strange object and jumps in surprise. Then it waves hello.");
   const [playing, setPlaying] = useState(true);
   const [keyframeTime, setKeyframeTime] = useState(0);
+  const [keyframeArmAngle, setKeyframeArmAngle] = useState(0);
+  const [keyframeRootHeight, setKeyframeRootHeight] = useState(0);
   const [saved, setSaved] = useState(false);
   const [message, setMessage] = useState("Local workspace ready");
   const [recentProjects, setRecentProjects] = useState<AnimationProject[]>([]);
@@ -80,7 +83,9 @@ export default function App() {
 
   function addKeyframe() {
     if (!activeScene) return;
-    const frame = createPoseKeyframe(keyframeTime);
+    const arm = keyframeArmAngle * Math.PI / 180;
+    const pose: EvaluatedPose = { rootPosition: [0, keyframeRootHeight, 0], leftArmRotation: [0, 0, arm], rightArmRotation: [0, 0, -arm], leftLegRotation: [0, 0, 0], rightLegRotation: [0, 0, 0] };
+    const frame = createPoseKeyframe(keyframeTime, pose);
     updateScene({ keyframes: [...(activeScene.keyframes ?? []).filter((item) => Math.abs(item.atSeconds - keyframeTime) > 0.001), frame].sort((a, b) => a.atSeconds - b.atSeconds) });
     setMessage("Keyframe added at " + keyframeTime.toFixed(1) + "s");
   }
@@ -144,7 +149,7 @@ export default function App() {
               <div className="timeline-track">
                 {project.scenes.map((scene, index) => <button key={scene.id} className={scene.id === activeSceneId ? "scene-card selected" : "scene-card"} style={{ flex: Math.max(1, scene.durationSeconds) }} onClick={() => setActiveSceneId(scene.id)}><small>{String(index + 1).padStart(2, "0")} · {scene.durationSeconds}s</small><strong>{scene.name}</strong><span>{scene.motion}</span></button>)}
               </div>
-              <div className="keyframe-tools"><div><label className="field-label">KEYFRAME TIME <b>{keyframeTime.toFixed(1)}s</b></label><input aria-label="Keyframe time" className="duration-range" type="range" min="0" max={Math.max(0.1, activeScene?.durationSeconds ?? 4)} step="0.1" value={Math.min(keyframeTime, activeScene?.durationSeconds ?? 4)} onChange={(event) => setKeyframeTime(Number(event.target.value))}/></div><button className="add-button" onClick={addKeyframe}><Plus size={14}/> Add keyframe</button><span>{activeScene?.keyframes?.length ?? 0} keyframes</span></div><div className="timeline-foot"><span>{project.scenes.length} scenes</span><span>Natural sound effects only · {totalDuration} seconds</span></div>
+              <div className="keyframe-tools"><div><label className="field-label">KEYFRAME TIME <b>{keyframeTime.toFixed(1)}s</b></label><input aria-label="Keyframe time" className="duration-range" type="range" min="0" max={Math.max(0.1, activeScene?.durationSeconds ?? 4)} step="0.1" value={Math.min(keyframeTime, activeScene?.durationSeconds ?? 4)} onChange={(event) => setKeyframeTime(Number(event.target.value))}/></div><div className="keyframe-pose"><label className="field-label">ARM ANGLE <b>{keyframeArmAngle}°</b></label><input className="duration-range" type="range" min="-150" max="150" step="5" value={keyframeArmAngle} onChange={(event) => setKeyframeArmAngle(Number(event.target.value))}/><label className="field-label">ROOT HEIGHT <b>{keyframeRootHeight.toFixed(1)}</b></label><input className="duration-range" type="range" min="0" max="2" step="0.1" value={keyframeRootHeight} onChange={(event) => setKeyframeRootHeight(Number(event.target.value))}/></div><button className="add-button" onClick={addKeyframe}><Plus size={14}/> Add keyframe</button><span>{activeScene?.keyframes?.length ?? 0} keyframes</span></div><div className="timeline-foot"><span>{project.scenes.length} scenes</span><span>Natural sound effects only · {totalDuration} seconds</span></div>
             </div>
           </div>
 
