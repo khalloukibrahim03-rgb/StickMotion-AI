@@ -30,6 +30,15 @@ export interface PoseKeyframe {
   rightLegRotation: [number, number, number];
 }
 
+export interface CameraKeyframe {
+  id: string;
+  atSeconds: number;
+  easing?: EasingCurve;
+  position: [number, number, number];
+  target: [number, number, number];
+  fov: number;
+}
+
 export interface CameraSettings {
   position: [number, number, number];
   target: [number, number, number];
@@ -45,6 +54,7 @@ export interface AnimationScene {
   environment: EnvironmentPreset;
   characterTransform: Transform3D;
   camera?: CameraSettings;
+  cameraKeyframes?: CameraKeyframe[];
   sounds: SceneSound[];
   keyframes?: PoseKeyframe[];
 }
@@ -161,6 +171,7 @@ function isAnimationScene(value: unknown): value is AnimationScene {
     && typeof value.description === "string"
     && motions.includes(value.motion as Motion)
     && environments.includes(value.environment as EnvironmentPreset)
+    && (value.cameraKeyframes === undefined || (Array.isArray(value.cameraKeyframes) && value.cameraKeyframes.every((frame) => isRecord(frame) && typeof frame.id === "string" && typeof frame.atSeconds === "number" && Number.isFinite(frame.atSeconds) && frame.atSeconds >= 0 && frame.atSeconds <= duration && (frame.easing === undefined || easingCurves.includes(frame.easing as EasingCurve)) && isVector3(frame.position) && isVector3(frame.target) && typeof frame.fov === "number" && Number.isFinite(frame.fov) && frame.fov >= 20 && frame.fov <= 80)))
     && (value.camera === undefined || (isRecord(value.camera)
       && isVector3(value.camera.position)
       && isVector3(value.camera.target)
