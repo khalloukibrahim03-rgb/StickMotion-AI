@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { ContactShadows, Grid, OrbitControls } from "@react-three/drei";
-import { ChevronRight, Pause, Play, Plus, Save, Sparkles, Trash2 } from "lucide-react";
+import { ChevronRight, Pause, Play, Plus, Save, Sparkles, Trash2, Volume2 } from "lucide-react";
 import Stickman from "./engine/Stickman";
 import { buildStoryboard } from "./core/storyboard";
 import { createPoseKeyframe } from "./core/animation";
@@ -9,6 +9,8 @@ import type { EvaluatedPose } from "./core/animation";
 import { createProject, createScene, type AnimationProject, type AnimationScene, type Motion } from "./core/model";
 import { listProjects, saveProject as persistProject } from "./core/storage";
 import { getPlaybackTime, setPlaybackTime } from "./core/playback";
+import { getCrossedSoundEvents, playNaturalSound, soundEffectLabels, unlockAudio } from "./core/sound";
+import type { SceneSound } from "./core/model";
 
 const motions: Motion[] = ["idle", "walk", "run", "jump", "wave"];
 
@@ -27,6 +29,8 @@ export default function App() {
   const [keyframeRootY, setKeyframeRootY] = useState(0);
   const [keyframeRootZ, setKeyframeRootZ] = useState(0);
   const [selectedKeyframeId, setSelectedKeyframeId] = useState<string | null>(null);
+  const [soundEffect, setSoundEffect] = useState<SceneSound["effect"]>("footstep");
+  const [soundVolume, setSoundVolume] = useState(0.7);
   const [saved, setSaved] = useState(false);
   const [message, setMessage] = useState("Local workspace ready");
   const [recentProjects, setRecentProjects] = useState<AnimationProject[]>([]);
@@ -46,7 +50,11 @@ export default function App() {
       if (previous) {
         const delta = (now - previous) / 1000;
         const duration = Math.max(0.1, activeScene?.durationSeconds ?? 4);
-        const next = getPlaybackTime() + delta;
+        const from = getPlaybackTime();
+        const next = from + delta;
+        for (const cue of getCrossedSoundEvents(activeScene?.sounds ?? [], from, Math.min(next, duration))) {
+          playNaturalSound(cue.effect, cue.volume);
+        }
         if (next >= duration) {
           const currentIndex = project.scenes.findIndex((scene) => scene.id === activeSceneId);
           const nextScene = project.scenes[(currentIndex + 1) % project.scenes.length];
@@ -176,6 +184,19 @@ export default function App() {
     setKeyframeRootZ(frame.rootPosition[2]);
   }
 
+  function addSoundCue() {
+    if (!activeScene) return;
+    const cue: SceneSound = { id: "sound_" + Math.random().toString(36).slice(2, 10), effect: soundEffect, atSeconds: Math.min(keyframeTime, activeScene.durationSeconds), volume: soundVolume };
+    updateScene({ sounds: [...(activeScene.sounds ?? []), cue].sort((a, b) => a.atSeconds - b.atSeconds) });
+    setMessage(soundEffectLabels[cue.effect] + " cue added at " + cue.atSeconds.toFixed(1) + "s");
+  }
+
+  function removeSoundCue(id: string) {
+    if (!activeScene) return;
+    updateScene({ sounds: (activeScene.sounds ?? []).filter((cue) => cue.id !== id) });
+    setMessage("Sound cue removed");
+  }
+
   function removeKeyframe() {
     if (!activeScene || !selectedKeyframeId) return;
     const remaining = (activeScene.keyframes ?? []).filter((frame) => frame.id !== selectedKeyframeId);
@@ -236,7 +257,7 @@ export default function App() {
                 </Canvas>
                 <div className="viewport-caption">{activeScene?.name ?? "No scene"} · {(activeScene?.motion ?? "idle").toUpperCase()}</div>
               </div>
-              <div className="viewport-controls"><div>SCENE {String(Math.max(1, project.scenes.findIndex((scene) => scene.id === activeSceneId) + 1)).padStart(2, "0")} / {String(project.scenes.length).padStart(2, "0")}</div><button className="play-button" onClick={() => setPlaying((value) => !value)}>{playing ? <Pause size={16}/> : <Play size={16}/>} {playing ? "Pause" : "Play"}</button><div>{playhead.toFixed(1)}s / {activeScene?.durationSeconds ?? 4}s · {totalDuration}s total</div></div>
+              <div className="viewport-controls"><div>SCENE {String(Math.max(1, project.scenes.findIndex((scene) => scene.id === activeSceneId) + 1)).padStart(2, "0")} / {String(project.scenes.length).padStart(2, "0")}</div><button className="play-button" onClick={() => { if (!playing) void unlockAudio(); setPlaying((value) => !value); }}>{playing ? <Pause size={16}/> : <Play size={16}/>} {playing ? "Pause" : "Play"}</button><div>{playhead.toFixed(1)}s / {activeScene?.durationSeconds ?? 4}s · {totalDuration}s total</div></div>
             </div>
 
             <div className="timeline-card">
@@ -265,6 +286,7 @@ export default function App() {
               <label className="field-label duration-label">DURATION <b>{activeScene?.durationSeconds ?? 4}s</b></label><input className="duration-range" type="range" min="1" max="12" value={activeScene?.durationSeconds ?? 4} onChange={(event) => updateScene({ durationSeconds: Number(event.target.value) })}/>
               <label className="field-label">DESCRIPTION</label><textarea className="description-input" rows={3} value={activeScene?.description ?? ""} onChange={(event) => updateScene({ description: event.target.value })}/>
             </section>
+            <section className="inspector-section sound-section"><div className="section-heading"><h3><Volume2 size={15}/> Natural sound effects</h3><span className="beta-tag">SFX</span></div><p>Place short sound cues on this scene. Audio is synthesized locally; no music is included.</p><label className="field-label">EFFECT</label><select className="text-input" value={soundEffect} onChange={(event) => setSoundEffect(event.target.value as SceneSound["effect"])}>{(Object.keys(soundEffectLabels) as SceneSound["effect"][]).map((effect) => <option key={effect} value={effect}>{soundEffectLabels[effect]}</option>)}</select><label className="field-label">VOLUME <b>{Math.round(soundVolume * 100)}%</b></label><input aria-label="Sound effect volume" className="duration-range" type="range" min="0" max="1" step="0.05" value={soundVolume} onChange={(event) => setSoundVolume(Number(event.target.value))}/><button className="generate-button" onClick={addSoundCue}><Plus size={14}/> Add cue at {keyframeTime.toFixed(1)}s</button><div className="sound-cue-list">{(activeScene?.sounds ?? []).map((cue) => <div className="sound-cue" key={cue.id}><span><strong>{soundEffectLabels[cue.effect]}</strong><small>{cue.atSeconds.toFixed(1)}s · {Math.round(cue.volume * 100)}%</small></span><button className="icon-action" aria-label={"Delete " + soundEffectLabels[cue.effect]} onClick={() => removeSoundCue(cue.id)}><Trash2 size={14}/></button></div>)}{(activeScene?.sounds ?? []).length === 0 && <small className="empty-projects">No sound cues in this scene yet.</small>}</div></section>
             <section className="inspector-section story-section"><div className="section-heading"><h3>Story builder</h3><span className="beta-tag">OFFLINE</span></div><p>Turn a short story into editable scenes. Motion suggestions use local rules, not a generative AI model.</p><textarea className="story-input" rows={5} value={story} onChange={(event) => setStory(event.target.value)} placeholder="Describe your animation..."/><button className="generate-button" onClick={generateStory}><Sparkles size={15}/> Generate scenes</button></section>
             <div className="inspector-status"><i/> {message}</div>
           </aside>
