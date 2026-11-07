@@ -20,7 +20,7 @@ export default function Stickman({ color, motion, durationSeconds, keyframes = [
   const rightLeg = useRef<THREE.Group>(null);
   const body = "#e9eaf2";
 
-  useFrame((_, delta) => {
+  useFrame(() => {
     if (keyframes.length > 0) {
       const pose = evaluatePose(keyframes, getPlaybackTime());
       root.current?.position.set(...pose.rootPosition);
@@ -45,12 +45,8 @@ export default function Stickman({ color, motion, durationSeconds, keyframes = [
     if (leftArm.current) leftArm.current.rotation.x = -pose.armSwing;
     if (rightArm.current) {
       rightArm.current.rotation.x = pose.armSwing;
-      rightArm.current.rotation.z = THREE.MathUtils.damp(
-        rightArm.current.rotation.z,
-        pose.waveArmRotation,
-        8,
-        delta,
-      );
+      // A direct time-based value keeps preview scrubbing and exported frames deterministic.
+      rightArm.current.rotation.z = pose.waveArmRotation;
     }
   });
 
