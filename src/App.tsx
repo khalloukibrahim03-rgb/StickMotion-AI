@@ -163,7 +163,8 @@ export default function App() {
     if (!activeScene || !selectedKeyframeId) return;
     const remaining = (activeScene.keyframes ?? []).filter((frame) => frame.id !== selectedKeyframeId);
     updateScene({ keyframes: remaining });
-    setSelectedKeyframeId(remaining[0]?.id ?? null);
+    if (remaining[0]) selectKeyframe(remaining[0]);
+    else setSelectedKeyframeId(null);
     setMessage("Keyframe deleted");
   }
 
