@@ -343,7 +343,7 @@ export default function App() {
           }
         }
         // Request the frame only after both the 3D scene and subtitle overlay are composed.
-        manualVideoTrack?.requestFrame();
+        manualVideoTrack?.requestFrame?.();
         if (index % 5 === 0 || index === schedule.length - 1) {
           setRenderProgress(Math.round(((index + 1) / schedule.length) * 100));
         }
@@ -566,7 +566,7 @@ export default function App() {
             <div className="viewport-card">
               <div className="viewport-top"><span>3D VIEWPORT <i/> LIVE PREVIEW</span><span>Perspective · Orbit to inspect</span></div>
               <div className="viewport">
-                <Canvas shadows camera={{ position: cameraSettings.position, fov: cameraSettings.fov }} onCreated={({ camera }) => { if (camera instanceof THREE.PerspectiveCamera) liveCameraRef.current = camera; }}>
+                <Canvas shadows gl={{ preserveDrawingBuffer: true }} camera={{ position: cameraSettings.position, fov: cameraSettings.fov }} onCreated={({ camera }) => { if (camera instanceof THREE.PerspectiveCamera) liveCameraRef.current = camera; }}>
                   <color attach="background" args={["#111522"]}/>
                   <ambientLight intensity={0.75}/>
                   <directionalLight position={[4, 8, 5]} intensity={2.1} castShadow shadow-mapSize={[1024, 1024]}/>
