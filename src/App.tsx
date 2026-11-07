@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
+import * as THREE from "three";
 import { ContactShadows, Grid, OrbitControls } from "@react-three/drei";
 import { ChevronRight, Download, Pause, Play, Plus, Save, Sparkles, Trash2, Upload, Volume2 } from "lucide-react";
 import Stickman from "./engine/Stickman";
+import CameraAnimator from "./engine/CameraAnimator";
 import { buildStoryboard } from "./core/storyboard";
 import { createPoseKeyframe, evaluateCamera } from "./core/animation";
 import type { EvaluatedPose } from "./core/animation";
@@ -19,6 +21,8 @@ export default function App() {
   const [project, setProject] = useState<AnimationProject>(() => createProject());
   const importInput = useRef<HTMLInputElement>(null);
   const subtitleImportInput = useRef<HTMLInputElement>(null);
+  const liveCameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const orbitControlsRef = useRef<{ target: THREE.Vector3 } | null>(null);
   const [activeSceneId, setActiveSceneId] = useState(project.scenes[0].id);
   const [subtitleDraft, setSubtitleDraft] = useState("");
   const [story, setStory] = useState("A curious stickman walks into a quiet room. It notices a strange object and jumps in surprise. Then it waves hello.");
@@ -150,6 +154,37 @@ export default function App() {
     anchor.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     setMessage("Subtitles exported as " + format.toUpperCase());
+  }
+
+  function addCameraKeyframe() {
+    if (!activeScene) return;
+    const fallback: CameraSettings = activeScene.camera ?? {
+      position: [4.8, 3.2, 6.2],
+      target: [0, 1.1, 0],
+      fov: 42,
+    };
+    const liveCamera = liveCameraRef.current;
+    const liveTarget = orbitControlsRef.current?.target;
+    const camera: CameraSettings = liveCamera ? {
+      position: [liveCamera.position.x, liveCamera.position.y, liveCamera.position.z],
+      target: liveTarget ? [liveTarget.x, liveTarget.y, liveTarget.z] : fallback.target,
+      fov: liveCamera.fov,
+    } : fallback;
+    const frame = {
+      id: "cam_" + Math.random().toString(36).slice(2, 10),
+      atSeconds: Math.min(playhead, activeScene.durationSeconds),
+      position: [...camera.position] as [number, number, number],
+      target: [...camera.target] as [number, number, number],
+      fov: camera.fov,
+    };
+    updateScene({
+      camera,
+      cameraKeyframes: [
+        ...(activeScene.cameraKeyframes ?? []).filter((item) => Math.abs(item.atSeconds - frame.atSeconds) > 0.001),
+        frame,
+      ].sort((left, right) => left.atSeconds - right.atSeconds),
+    });
+    setMessage("Captured live camera view at " + frame.atSeconds.toFixed(2) + "s");
   }
 
   function addSubtitleCue() {
@@ -364,7 +399,7 @@ export default function App() {
             <div className="viewport-card">
               <div className="viewport-top"><span>3D VIEWPORT <i/> LIVE PREVIEW</span><span>Perspective · Orbit to inspect</span></div>
               <div className="viewport">
-                <Canvas shadows camera={{ position: cameraSettings.position, fov: cameraSettings.fov }}>
+                <Canvas shadows camera={{ position: cameraSettings.position, fov: cameraSettings.fov }} onCreated={({ camera }) => { if (camera instanceof THREE.PerspectiveCamera) liveCameraRef.current = camera; }}>
                   <color attach="background" args={["#111522"]}/>
                   <ambientLight intensity={0.75}/>
                   <directionalLight position={[4, 8, 5]} intensity={2.1} castShadow shadow-mapSize={[1024, 1024]}/>
@@ -372,7 +407,7 @@ export default function App() {
                   <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.06, 0]} receiveShadow><planeGeometry args={[100, 100]}/><meshStandardMaterial color="#171c2b" roughness={0.95}/></mesh>
                   <Stickman color={project.character.primaryColor} motion={activeScene?.motion ?? "idle"} playing={playing} keyframes={activeScene?.keyframes ?? []}/>
                   <ContactShadows position={[0, -0.045, 0]} opacity={0.38} scale={5} blur={2.4} far={2}/>
-                  <OrbitControls target={cameraSettings.target} minDistance={3} maxDistance={12} maxPolarAngle={Math.PI / 2.02}/>
+                  <CameraAnimator settings={cameraSettings} animate={playing && Boolean(activeScene?.cameraKeyframes?.length)} sceneId={activeSceneId}/><OrbitControls ref={(controls) => { orbitControlsRef.current = controls as unknown as { target: THREE.Vector3 } | null; }} enabled={!(playing && Boolean(activeScene?.cameraKeyframes?.length))} target={cameraSettings.target} minDistance={3} maxDistance={12} maxPolarAngle={Math.PI / 2.02}/>
                 </Canvas>
                 <div className="viewport-caption">{activeScene?.name ?? "No scene"} · {(activeScene?.motion ?? "idle").toUpperCase()}</div>{(activeScene?.subtitles ?? []).filter((cue) => playhead >= cue.startSeconds && playhead < cue.endSeconds).map((cue) => <div className="subtitle-preview" key={cue.id}>{cue.text}</div>)}
               </div>
@@ -409,7 +444,7 @@ export default function App() {
                 <input aria-label="Camera distance" className="duration-range" type="range" min="3" max="12" step="0.2" value={Math.min(12, Math.max(3, Math.hypot(...(activeScene?.camera?.position ?? [4.8,3.2,6.2]))))} onChange={(event) => { const camera = activeScene?.camera ?? {position:[4.8,3.2,6.2] as [number,number,number],target:[0,1.1,0] as [number,number,number],fov:42}; const d = Math.hypot(...camera.position) || 1; const scale = Number(event.target.value)/d; updateScene({camera:{...camera,position:camera.position.map(v=>v*scale) as [number,number,number]}}); }}/>
                 <label className="field-label">VERTICAL ANGLE <b>{(activeScene?.camera?.position[1] ?? 3.2).toFixed(1)}</b></label><input aria-label="Camera vertical angle" className="duration-range" type="range" min="1" max="8" step="0.2" value={activeScene?.camera?.position[1] ?? 3.2} onChange={(event) => { const camera = activeScene?.camera ?? {position:[4.8,3.2,6.2] as [number,number,number],target:[0,1.1,0] as [number,number,number],fov:42}; updateScene({camera:{...camera,position:[camera.position[0],Number(event.target.value),camera.position[2]]}}); }}/>
                 <label className="field-label">FIELD OF VIEW <b>{activeScene?.camera?.fov ?? 42}°</b></label><input aria-label="Camera field of view" className="duration-range" type="range" min="25" max="75" step="1" value={activeScene?.camera?.fov ?? 42} onChange={(event) => updateScene({camera:{...(activeScene?.camera ?? {position:[4.8,3.2,6.2],target:[0,1.1,0],fov:42}),fov:Number(event.target.value)}})}/>
-                <div className="camera-keyframes"><div className="section-heading"><span className="field-label">CAMERA KEYFRAMES · {activeScene?.cameraKeyframes?.length ?? 0}</span><button className="add-button" onClick={() => { const camera = activeScene?.camera ?? { position: [4.8,3.2,6.2] as [number,number,number], target: [0,1.1,0] as [number,number,number], fov: 42 }; const frame = { id: "cam_" + Math.random().toString(36).slice(2,10), atSeconds: Math.min(playhead, activeScene?.durationSeconds ?? 4), position: [...camera.position] as [number,number,number], target: [...camera.target] as [number,number,number], fov: camera.fov }; updateScene({ cameraKeyframes: [...(activeScene?.cameraKeyframes ?? []).filter((item) => Math.abs(item.atSeconds-frame.atSeconds)>0.001), frame].sort((x,y)=>x.atSeconds-y.atSeconds) }); setMessage("Camera keyframe added at " + frame.atSeconds.toFixed(2) + "s"); }}><Plus size={12}/> Add at playhead</button></div><div className="camera-keyframe-list">{(activeScene?.cameraKeyframes ?? []).map((frame) => <div className="camera-keyframe-row" key={frame.id}><button className="keyframe-chip" onClick={() => { setPlaying(false); setPlayhead(frame.atSeconds); setPlaybackTime(frame.atSeconds); }}>{frame.atSeconds.toFixed(2)}s</button><button className="icon-action" aria-label="Delete camera keyframe" onClick={() => updateScene({cameraKeyframes:(activeScene?.cameraKeyframes ?? []).filter((item)=>item.id!==frame.id)})}><Trash2 size={12}/></button></div>)}{!(activeScene?.cameraKeyframes?.length) && <small className="empty-projects">Move the playhead, adjust camera framing, then add a camera keyframe.</small>}</div></div>
+                <div className="camera-keyframes"><div className="section-heading"><span className="field-label">CAMERA KEYFRAMES · {activeScene?.cameraKeyframes?.length ?? 0}</span><button className="add-button" onClick={addCameraKeyframe}><Plus size={12}/> Capture view at playhead</button></div><div className="camera-keyframe-list">{(activeScene?.cameraKeyframes ?? []).map((frame) => <div className="camera-keyframe-row" key={frame.id}><button className="keyframe-chip" onClick={() => { setPlaying(false); setPlayhead(frame.atSeconds); setPlaybackTime(frame.atSeconds); }}>{frame.atSeconds.toFixed(2)}s</button><button className="icon-action" aria-label="Delete camera keyframe" onClick={() => updateScene({cameraKeyframes:(activeScene?.cameraKeyframes ?? []).filter((item)=>item.id!==frame.id)})}><Trash2 size={12}/></button></div>)}{!(activeScene?.cameraKeyframes?.length) && <small className="empty-projects">Move the playhead, adjust camera framing, then add a camera keyframe.</small>}</div></div>
               </div>
             </section>
             <section className="inspector-section sound-section"><div className="section-heading"><h3><Volume2 size={15}/> Natural sound effects</h3><span className="beta-tag">SFX</span></div><p>Place short sound cues on this scene. Audio is synthesized locally; no music is included.</p><label className="field-label">EFFECT</label><select className="text-input" value={soundEffect} onChange={(event) => setSoundEffect(event.target.value as SceneSound["effect"])}>{(Object.keys(soundEffectLabels) as SceneSound["effect"][]).map((effect) => <option key={effect} value={effect}>{soundEffectLabels[effect]}</option>)}</select><label className="field-label">VOLUME <b>{Math.round(soundVolume * 100)}%</b></label><input aria-label="Sound effect volume" className="duration-range" type="range" min="0" max="1" step="0.05" value={soundVolume} onChange={(event) => setSoundVolume(Number(event.target.value))}/><div className="sound-actions"><button className="add-button" onClick={() => void previewSound()}><Play size={13}/> Preview</button><button className="generate-button" onClick={addSoundCue}><Plus size={14}/> Add cue at {keyframeTime.toFixed(1)}s</button></div><div className="sound-cue-list">{(activeScene?.sounds ?? []).map((cue) => <div className="sound-cue" key={cue.id}><span><strong>{soundEffectLabels[cue.effect]}</strong><small>{cue.atSeconds.toFixed(1)}s · {Math.round(cue.volume * 100)}%</small><input aria-label={"Move " + soundEffectLabels[cue.effect] + " cue time"} className="duration-range cue-time-range" type="range" min="0" max={activeScene?.durationSeconds ?? 4} step="0.05" value={Math.min(cue.atSeconds, activeScene?.durationSeconds ?? 4)} onChange={(event) => updateSoundCueTime(cue.id, Number(event.target.value))}/></span><button className="icon-action" aria-label={"Delete " + soundEffectLabels[cue.effect]} onClick={() => removeSoundCue(cue.id)}><Trash2 size={14}/></button></div>)}{(activeScene?.sounds ?? []).length === 0 && <small className="empty-projects">No sound cues in this scene yet.</small>}</div></section>
