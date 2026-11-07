@@ -17,6 +17,10 @@ describe("sound cue playback scheduling", () => {
     expect(getCrossedSoundEvents(cues, 0, 3).map((cue) => cue.id)).toEqual(["early", "middle", "late"]);
   });
 
+  it("fires a cue placed exactly at the beginning once playback starts", () => {
+    expect(getCrossedSoundEvents([{ id: "start", effect: "wind", atSeconds: 0, volume: 0.5 }], 0, 0.05).map((cue) => cue.id)).toEqual(["start"]);
+  });
+
   it("does not fire cues while seeking backwards", () => {
     expect(getCrossedSoundEvents(cues, 2, 0).length).toBe(0);
   });
