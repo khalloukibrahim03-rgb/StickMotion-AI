@@ -8,6 +8,21 @@ describe("animation project validation", () => {
     expect(isAnimationProject(imported)).toBe(true);
   });
 
+  it("accepts older projects without camera settings", () => {
+    const project = createProject();
+    const legacy = { ...project, scenes: project.scenes.map(({ camera: _camera, ...scene }) => scene) };
+    expect(isAnimationProject(legacy)).toBe(true);
+  });
+
+  it("rejects invalid camera settings", () => {
+    const project = createProject();
+    const malformed = {
+      ...project,
+      scenes: [{ ...project.scenes[0], camera: { position: [1, 2, 3], target: [0, 0, 0], fov: 120 } }],
+    };
+    expect(isAnimationProject(malformed)).toBe(false);
+  });
+
   it("rejects unsupported schema versions", () => {
     const project = createProject();
     expect(isAnimationProject({ ...project, schemaVersion: 99 })).toBe(false);
