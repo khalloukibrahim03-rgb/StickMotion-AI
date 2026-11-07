@@ -23,7 +23,7 @@ function applyRootTransform(root: THREE.Group | null, animatedPosition: [number,
   root.scale.set(...transform.scale);
 }
 
-export default function Stickman({ color, motion, durationSeconds, keyframes = [], transform = { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] } }: { color: string; motion: Motion; durationSeconds: number; keyframes?: PoseKeyframe[]; transform?: Transform3D }) {
+export default function Stickman({ color, motion, durationSeconds, keyframes = [], transform = { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] }, timeSeconds }: { color: string; motion: Motion; durationSeconds: number; keyframes?: PoseKeyframe[]; transform?: Transform3D; timeSeconds?: number }) {
   const root = useRef<THREE.Group>(null);
   const leftArm = useRef<THREE.Group>(null);
   const rightArm = useRef<THREE.Group>(null);
@@ -33,7 +33,7 @@ export default function Stickman({ color, motion, durationSeconds, keyframes = [
 
   useFrame(() => {
     if (keyframes.length > 0) {
-      const pose = evaluatePose(keyframes, getPlaybackTime());
+      const pose = evaluatePose(keyframes, timeSeconds ?? getPlaybackTime());
       applyRootTransform(root.current, pose.rootPosition, transform);
       leftArm.current?.rotation.set(...pose.leftArmRotation);
       rightArm.current?.rotation.set(...pose.rightArmRotation);
@@ -47,7 +47,7 @@ export default function Stickman({ color, motion, durationSeconds, keyframes = [
     rightArm.current?.rotation.set(0, 0, 0);
     leftLeg.current?.rotation.set(0, 0, 0);
     rightLeg.current?.rotation.set(0, 0, 0);
-    const t = getPlaybackTime();
+    const t = timeSeconds ?? getPlaybackTime();
     const pose = evaluateProceduralMotion(motion, t, durationSeconds);
     applyRootTransform(root.current, pose.rootPosition, transform);
     if (leftLeg.current) leftLeg.current.rotation.x = pose.legSwing;
