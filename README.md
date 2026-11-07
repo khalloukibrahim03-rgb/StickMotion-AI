@@ -12,6 +12,7 @@ The `development` branch is the active engineering branch. The active editor she
 - `src/core/storyboard.ts` — deterministic offline story-to-scene planner. This is explicitly rule-based, not a hosted AI model.
 - `src/core/animation.ts` — pose keyframe creation and linear interpolation across character joints.
 - `src/core/animation.test.ts` — unit tests for keyframe boundary and interpolation behavior.
+- `src/core/playback.ts` — external animation clock so Three.js can read playback time without forcing a full React editor render on every frame.
 - `src/core/storage.ts` — IndexedDB project repository with save, load, list, and delete operations.
 
 ## Product principles
@@ -51,13 +52,13 @@ GitHub Actions is configured to install dependencies, run TypeScript checks, and
 
 ## Current limitations
 
-The early prototype is not yet a production release. The story planner is rule-based; the existing character motions are procedural; the timeline is currently a scene sequencer rather than a full keyframe editor; and the prototype export is a viewport WebM preview, not a complete multi-scene render or MP4 export. These limitations will be removed milestone by milestone and verified before release.
+The application is not yet a production release. The story planner is rule-based rather than generative AI. The character supports procedural motions and editable full-body pose keyframes for both arms, both legs, and the root transform; keyframe interpolation is currently linear. The timeline supports scene sequencing and scene-local playback, but automatic multi-scene playback, easing curves, camera tracks, synchronized sound playback, and complete MP4 export are still under development. These limitations will be removed milestone by milestone and verified before release.
 
 ## Roadmap
 
 1. Stabilize the project model and local persistence.
 2. Integrate the canonical model into the editor and add project management.
-3. Expand the procedural character rig and keyframe editor with per-joint controls.
+3. Expand the procedural character rig and keyframe editor with per-joint controls, editable poses, and easing curves.
 4. Implement multi-scene playback, camera controls, and a real timeline.
 5. Add story planning with editable scene/action/camera suggestions.
 6. Synchronize natural sound effects and subtitles.
