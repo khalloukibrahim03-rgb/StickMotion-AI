@@ -34,7 +34,7 @@ The `development` branch is the active engineering branch. The active editor she
 ## Planned application architecture
 
 - `src/core` — canonical project model, story planning, persistence, commands, and validation.
-- `src/engine` — Three.js character rig, animation playback, scene and camera systems.
+- `src/engine` — Three.js character rig, animation playback, scene and camera systems; `CameraAnimator` applies keyed camera position, target, and FOV to the live viewport.
 - `src/media` — audio scheduling, subtitles, frame capture, and video rendering.
 - `src/ui` — React editor, panels, timeline, and accessible controls.
 
@@ -60,7 +60,7 @@ GitHub Actions is configured to install dependencies, run TypeScript checks, and
 
 ## Current limitations
 
-The application is not yet a production release. The story planner is rule-based rather than generative AI. The character supports procedural motions and editable full-body pose keyframes for both arms, both legs, and the root transform, with linear and eased interpolation. Scene-local natural sound cues can be previewed, edited, and triggered during forward timeline playback. Projects can be saved locally and transferred as validated JSON files. Camera keyframe tracks, muxing subtitle/audio tracks into the final video, and complete MP4 export are still under development. These limitations will be removed milestone by milestone and verified before release.
+The application is not yet a production release. The story planner is rule-based rather than generative AI. The character supports procedural motions and editable full-body pose keyframes for both arms, both legs, and the root transform, with linear and eased interpolation. Scene-local natural sound cues can be previewed, edited, and triggered during forward timeline playback. Projects can be saved locally and transferred as validated JSON files. Camera keyframes now animate the live preview while playing; pause playback to orbit the camera manually and capture a new keyframe. Muxing subtitle/audio tracks into the final video, and complete MP4 export are still under development. These limitations will be removed milestone by milestone and verified before release.
 
 ## Roadmap
 
