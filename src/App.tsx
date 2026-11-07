@@ -295,7 +295,7 @@ export default function App() {
           compositeContext.textAlign = "center";
           compositeContext.textBaseline = "middle";
           for (const cue of activeCues) {
-            const words = cue.text.split(/\\s+/);
+            const words = cue.text.split(/\s+/);
             const lines: string[] = [];
             let line = "";
             for (const word of words) {
@@ -316,7 +316,7 @@ export default function App() {
             compositeContext.roundRect((width - boxWidth) / 2, centerY - blockHeight / 2, boxWidth, blockHeight, fontSize * 0.35);
             compositeContext.fill();
             compositeContext.fillStyle = "#ffffff";
-            compositeContext.direction = /[\\u0600-\\u06FF]/.test(cue.text) ? "rtl" : "ltr";
+            compositeContext.direction = /[\u0600-\u06FF]/.test(cue.text) ? "rtl" : "ltr";
             lines.forEach((item, lineIndex) => compositeContext.fillText(item, width / 2, centerY - ((lines.length - 1) * lineHeight) / 2 + lineIndex * lineHeight, width * 0.84));
           }
         }
