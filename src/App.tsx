@@ -6,6 +6,7 @@ import { ChevronRight, Download, Pause, Play, Plus, Save, Sparkles, Trash2, Uplo
 import Stickman from "./engine/Stickman";
 import CameraAnimator from "./engine/CameraAnimator";
 import EnvironmentStage from "./engine/EnvironmentStage";
+import SceneProps from "./engine/SceneProps";
 import { buildStoryboard } from "./core/storyboard";
 import { buildRenderSchedule, evaluateRenderFrame, getRenderMimeType } from "./core/render";
 import { createPoseKeyframe, evaluateCamera } from "./core/animation";
@@ -575,6 +576,7 @@ export default function App() {
               <div className="viewport">
                 <Canvas shadows gl={{ preserveDrawingBuffer: true }} camera={{ position: cameraSettings.position, fov: cameraSettings.fov }} onCreated={({ camera }) => { if (camera instanceof THREE.PerspectiveCamera) liveCameraRef.current = camera; }}>
                   <EnvironmentStage environment={activeScene?.environment ?? "studio"}/>
+                  <SceneProps props={activeScene?.props ?? []}/>
                   <ambientLight intensity={activeScene?.environment === "night" ? 0.48 : activeScene?.environment === "nature" ? 0.88 : 0.75}/>
                   <directionalLight position={[4, 8, 5]} color={activeScene?.environment === "night" ? "#aab8ff" : activeScene?.environment === "nature" ? "#fff0cf" : "#ffffff"} intensity={activeScene?.environment === "night" ? 1.25 : 2.1} castShadow shadow-mapSize={[1024, 1024]}/>
                   {activeScene?.environment === "studio" && <Grid position={[0, -0.03, 0]} args={[18, 18]} cellSize={0.5} cellColor="#343b52" sectionColor="#59627d" fadeDistance={20} infiniteGrid/>}
