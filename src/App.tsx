@@ -10,7 +10,7 @@ import { createProject, createScene, isAnimationProject, type AnimationProject, 
 import { listProjects, saveProject as persistProject } from "./core/storage";
 import { getPlaybackTime, setPlaybackTime } from "./core/playback";
 import { getCrossedSoundEvents, playNaturalSound, soundEffectLabels, unlockAudio } from "./core/sound";
-import { serializeSubtitles, type SubtitleFormat } from "./core/subtitles";
+import { distributeSubtitlesAcrossScenes, parseSubtitleFile, serializeSubtitles, type SubtitleFormat } from "./core/subtitles";
 import type { SceneSound, SubtitleCue } from "./core/model";
 
 const motions: Motion[] = ["idle", "walk", "run", "jump", "wave"];
@@ -18,6 +18,7 @@ const motions: Motion[] = ["idle", "walk", "run", "jump", "wave"];
 export default function App() {
   const [project, setProject] = useState<AnimationProject>(() => createProject());
   const importInput = useRef<HTMLInputElement>(null);
+  const subtitleImportInput = useRef<HTMLInputElement>(null);
   const [activeSceneId, setActiveSceneId] = useState(project.scenes[0].id);
   const [subtitleDraft, setSubtitleDraft] = useState("");
   const [story, setStory] = useState("A curious stickman walks into a quiet room. It notices a strange object and jumps in surprise. Then it waves hello.");
@@ -110,6 +111,28 @@ export default function App() {
     updateScene({
       subtitles: (activeScene.subtitles ?? []).map((cue) => cue.id === id ? { ...cue, ...patch } : cue),
     });
+  }
+
+  async function importSubtitleFile(file?: File) {
+    if (!file) return;
+    try {
+      const cues = parseSubtitleFile(await file.text());
+      if (!cues.length) {
+        setMessage("No valid SRT or WebVTT cues found in this file");
+        return;
+      }
+      const result = distributeSubtitlesAcrossScenes(project.scenes, cues);
+      if (!result.importedCount) {
+        setMessage("No subtitle cues overlap this project's timeline");
+        return;
+      }
+      updateProject({ scenes: result.scenes });
+      setMessage("Imported " + result.importedCount + " scene subtitle cues" + (result.skippedCount ? " · skipped " + result.skippedCount + " outside the project" : ""));
+    } catch {
+      setMessage("Could not read this subtitle file");
+    } finally {
+      if (subtitleImportInput.current) subtitleImportInput.current.value = "";
+    }
   }
 
   function exportSubtitleFile(format: SubtitleFormat) {
@@ -399,7 +422,7 @@ export default function App() {
                 <input aria-label="Subtitle end time" className="duration-range" type="range" min={Math.min(activeScene?.durationSeconds ?? 4, cue.startSeconds + 0.1)} max={activeScene?.durationSeconds ?? 4} step="0.05" value={cue.endSeconds} onChange={(event) => updateSubtitleCue(cue.id, { endSeconds: Number(event.target.value) })}/>
                 <button className="cue-time" onClick={() => { setPlaying(false); setPlayhead(cue.startSeconds); setPlaybackTime(cue.startSeconds); }}>Preview from start</button>
               </div>)}{!(activeScene?.subtitles?.length) && <small className="empty-projects">No subtitles in this scene yet.</small>}</div>
-              <div className="subtitle-export-actions"><button className="sound-add" onClick={() => exportSubtitleFile("srt")}><Download size={12}/> Export SRT</button><button className="sound-add" onClick={() => exportSubtitleFile("vtt")}><Download size={12}/> Export VTT</button></div></section>
+              <div className="subtitle-export-actions"><input ref={subtitleImportInput} className="file-input-hidden" type="file" accept=".srt,.vtt,text/vtt,application/x-subrip" aria-label="Import SRT or WebVTT subtitles" onChange={(event) => void importSubtitleFile(event.target.files?.[0])}/><button className="sound-add" onClick={() => subtitleImportInput.current?.click()}><Upload size={12}/> Import SRT/VTT</button><button className="sound-add" onClick={() => exportSubtitleFile("srt")}><Download size={12}/> Export SRT</button><button className="sound-add" onClick={() => exportSubtitleFile("vtt")}><Download size={12}/> Export VTT</button></div></section>
             <section className="inspector-section story-section"><div className="section-heading"><h3>Story builder</h3><span className="beta-tag">OFFLINE</span></div><p>Turn a short story into editable scenes. Motion suggestions use local rules, not a generative AI model.</p><textarea className="story-input" rows={5} value={story} onChange={(event) => setStory(event.target.value)} placeholder="Describe your animation..."/><button className="generate-button" onClick={generateStory}><Sparkles size={15}/> Generate scenes</button></section>
             <div className="inspector-status"><i/> {message}</div>
           </aside>
