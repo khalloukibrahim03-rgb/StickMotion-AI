@@ -555,7 +555,7 @@ export default function App() {
                   <directionalLight position={[4, 8, 5]} intensity={2.1} castShadow shadow-mapSize={[1024, 1024]}/>
                   <Grid position={[0, -0.03, 0]} args={[18, 18]} cellSize={0.5} cellColor="#343b52" sectionColor="#59627d" fadeDistance={20} infiniteGrid/>
                   <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.06, 0]} receiveShadow><planeGeometry args={[100, 100]}/><meshStandardMaterial color="#171c2b" roughness={0.95}/></mesh>
-                  <Stickman color={project.character.primaryColor} motion={activeScene?.motion ?? "idle"} playing={playing || rendering} keyframes={activeScene?.keyframes ?? []}/>
+                  <Stickman color={project.character.primaryColor} motion={activeScene?.motion ?? "idle"} playing={playing || rendering} durationSeconds={activeScene?.durationSeconds ?? 4} keyframes={activeScene?.keyframes ?? []}/>
                   <ContactShadows position={[0, -0.045, 0]} opacity={0.38} scale={5} blur={2.4} far={2}/>
                   <CameraAnimator settings={cameraSettings} animate={playing && !rendering && Boolean(activeScene?.cameraKeyframes?.length)} sceneId={activeSceneId}/><OrbitControls ref={(controls) => { orbitControlsRef.current = controls as unknown as { target: THREE.Vector3 } | null; }} enabled={!(playing && Boolean(activeScene?.cameraKeyframes?.length))} target={cameraSettings.target} minDistance={3} maxDistance={12} maxPolarAngle={Math.PI / 2.02}/>
                 </Canvas>
