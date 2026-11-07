@@ -10,7 +10,8 @@ import { createProject, createScene, isAnimationProject, type AnimationProject, 
 import { listProjects, saveProject as persistProject } from "./core/storage";
 import { getPlaybackTime, setPlaybackTime } from "./core/playback";
 import { getCrossedSoundEvents, playNaturalSound, soundEffectLabels, unlockAudio } from "./core/sound";
-import type { SceneSound } from "./core/model";
+import { serializeSubtitles, type SubtitleFormat } from "./core/subtitles";
+import type { SceneSound, SubtitleCue } from "./core/model";
 
 const motions: Motion[] = ["idle", "walk", "run", "jump", "wave"];
 
@@ -103,6 +104,30 @@ export default function App() {
     });
   }
 
+
+  function updateSubtitleCue(id: string, patch: Partial<SubtitleCue>) {
+    if (!activeScene) return;
+    updateScene({
+      subtitles: (activeScene.subtitles ?? []).map((cue) => cue.id === id ? { ...cue, ...patch } : cue),
+    });
+  }
+
+  function exportSubtitleFile(format: SubtitleFormat) {
+    const contents = serializeSubtitles(project.scenes, format);
+    if (!contents.trim()) {
+      setMessage("There are no subtitles to export yet");
+      return;
+    }
+    const blob = new Blob([contents], { type: format === "vtt" ? "text/vtt;charset=utf-8" : "application/x-subrip;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    const base = project.title.trim().replace(/[^a-z0-9-_]+/gi, "-") || "stickmotion";
+    anchor.href = url;
+    anchor.download = base + (format === "vtt" ? ".vtt" : ".srt");
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setMessage("Subtitles exported as " + format.toUpperCase());
+  }
 
   function addSubtitleCue() {
     const text = subtitleDraft.trim();
@@ -365,7 +390,16 @@ export default function App() {
               </div>
             </section>
             <section className="inspector-section sound-section"><div className="section-heading"><h3><Volume2 size={15}/> Natural sound effects</h3><span className="beta-tag">SFX</span></div><p>Place short sound cues on this scene. Audio is synthesized locally; no music is included.</p><label className="field-label">EFFECT</label><select className="text-input" value={soundEffect} onChange={(event) => setSoundEffect(event.target.value as SceneSound["effect"])}>{(Object.keys(soundEffectLabels) as SceneSound["effect"][]).map((effect) => <option key={effect} value={effect}>{soundEffectLabels[effect]}</option>)}</select><label className="field-label">VOLUME <b>{Math.round(soundVolume * 100)}%</b></label><input aria-label="Sound effect volume" className="duration-range" type="range" min="0" max="1" step="0.05" value={soundVolume} onChange={(event) => setSoundVolume(Number(event.target.value))}/><div className="sound-actions"><button className="add-button" onClick={() => void previewSound()}><Play size={13}/> Preview</button><button className="generate-button" onClick={addSoundCue}><Plus size={14}/> Add cue at {keyframeTime.toFixed(1)}s</button></div><div className="sound-cue-list">{(activeScene?.sounds ?? []).map((cue) => <div className="sound-cue" key={cue.id}><span><strong>{soundEffectLabels[cue.effect]}</strong><small>{cue.atSeconds.toFixed(1)}s · {Math.round(cue.volume * 100)}%</small><input aria-label={"Move " + soundEffectLabels[cue.effect] + " cue time"} className="duration-range cue-time-range" type="range" min="0" max={activeScene?.durationSeconds ?? 4} step="0.05" value={Math.min(cue.atSeconds, activeScene?.durationSeconds ?? 4)} onChange={(event) => updateSoundCueTime(cue.id, Number(event.target.value))}/></span><button className="icon-action" aria-label={"Delete " + soundEffectLabels[cue.effect]} onClick={() => removeSoundCue(cue.id)}><Trash2 size={14}/></button></div>)}{(activeScene?.sounds ?? []).length === 0 && <small className="empty-projects">No sound cues in this scene yet.</small>}</div></section>
-            <section className="inspector-section subtitle-section"><div className="section-heading"><h3>Subtitles</h3><span className="beta-tag">LOCAL</span></div><p>Add timed captions in Arabic or English. Preview them at the current playhead.</p><textarea className="description-input" rows={2} maxLength={500} value={subtitleDraft} onChange={(event) => setSubtitleDraft(event.target.value)} placeholder="Type a caption / اكتب الترجمة هنا..."/><button className="generate-button" disabled={!subtitleDraft.trim()} onClick={addSubtitleCue}><Plus size={14}/> Add subtitle at {playhead.toFixed(1)}s</button><div className="subtitle-cue-list">{(activeScene?.subtitles ?? []).map((cue) => <div className="subtitle-cue" key={cue.id}><span><strong>{cue.text}</strong><small>{cue.startSeconds.toFixed(1)}–{cue.endSeconds.toFixed(1)}s</small></span><button className="icon-action" aria-label="Delete subtitle" onClick={() => updateScene({subtitles:(activeScene?.subtitles ?? []).filter((item)=>item.id!==cue.id)})}><Trash2 size={13}/></button></div>)}{!(activeScene?.subtitles?.length) && <small className="empty-projects">No subtitles in this scene yet.</small>}</div></section>
+            <section className="inspector-section subtitle-section"><div className="section-heading"><h3>Subtitles</h3><span className="beta-tag">LOCAL</span></div><p>Add timed captions in Arabic or English. Preview them at the current playhead.</p><textarea className="description-input" rows={2} maxLength={500} value={subtitleDraft} onChange={(event) => setSubtitleDraft(event.target.value)} placeholder="Type a caption / اكتب الترجمة هنا..."/><button className="generate-button" disabled={!subtitleDraft.trim()} onClick={addSubtitleCue}><Plus size={14}/> Add subtitle at {playhead.toFixed(1)}s</button><div className="subtitle-cue-list">{(activeScene?.subtitles ?? []).map((cue) => <div className="subtitle-cue subtitle-cue-edit" key={cue.id}>
+                <div className="subtitle-cue-heading"><span>{cue.startSeconds.toFixed(2)}–{cue.endSeconds.toFixed(2)}s</span><button className="icon-action" aria-label="Delete subtitle" onClick={() => updateScene({subtitles:(activeScene?.subtitles ?? []).filter((item)=>item.id!==cue.id)})}><Trash2 size={13}/></button></div>
+                <input className="subtitle-text-input" aria-label="Edit subtitle text" maxLength={500} value={cue.text} onChange={(event) => updateSubtitleCue(cue.id, { text: event.target.value })}/>
+                <label className="field-label">START <b>{cue.startSeconds.toFixed(2)}s</b></label>
+                <input aria-label="Subtitle start time" className="duration-range" type="range" min="0" max={Math.max(0, cue.endSeconds - 0.1)} step="0.05" value={cue.startSeconds} onChange={(event) => updateSubtitleCue(cue.id, { startSeconds: Number(event.target.value) })}/>
+                <label className="field-label">END <b>{cue.endSeconds.toFixed(2)}s</b></label>
+                <input aria-label="Subtitle end time" className="duration-range" type="range" min={Math.min(activeScene?.durationSeconds ?? 4, cue.startSeconds + 0.1)} max={activeScene?.durationSeconds ?? 4} step="0.05" value={cue.endSeconds} onChange={(event) => updateSubtitleCue(cue.id, { endSeconds: Number(event.target.value) })}/>
+                <button className="cue-time" onClick={() => { setPlaying(false); setPlayhead(cue.startSeconds); setPlaybackTime(cue.startSeconds); }}>Preview from start</button>
+              </div>)}{!(activeScene?.subtitles?.length) && <small className="empty-projects">No subtitles in this scene yet.</small>}</div>
+              <div className="subtitle-export-actions"><button className="sound-add" onClick={() => exportSubtitleFile("srt")}><Download size={12}/> Export SRT</button><button className="sound-add" onClick={() => exportSubtitleFile("vtt")}><Download size={12}/> Export VTT</button></div></section>
             <section className="inspector-section story-section"><div className="section-heading"><h3>Story builder</h3><span className="beta-tag">OFFLINE</span></div><p>Turn a short story into editable scenes. Motion suggestions use local rules, not a generative AI model.</p><textarea className="story-input" rows={5} value={story} onChange={(event) => setStory(event.target.value)} placeholder="Describe your animation..."/><button className="generate-button" onClick={generateStory}><Sparkles size={15}/> Generate scenes</button></section>
             <div className="inspector-status"><i/> {message}</div>
           </aside>
