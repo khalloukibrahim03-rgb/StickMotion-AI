@@ -88,6 +88,17 @@ describe("procedural motion", () => {
     expect(evaluateProceduralMotion("jump", 0.5, 4).bodyBounce).toBeGreaterThan(0);
   });
 
+  it("jumps over generated scene obstacles along a complete arc", () => {
+    const start = evaluateProceduralMotion("jump", 0, 4, true);
+    const middle = evaluateProceduralMotion("jump", 2, 4, true);
+    const end = evaluateProceduralMotion("jump", 4, 4, true);
+    expect(start.rootPosition[0]).toBeCloseTo(-1.8);
+    expect(middle.rootPosition[0]).toBeCloseTo(0);
+    expect(middle.bodyBounce).toBeCloseTo(1.35);
+    expect(end.rootPosition[0]).toBeCloseTo(1.8);
+    expect(end.bodyBounce).toBeCloseTo(0);
+  });
+
   it("clamps movement progress and protects against invalid timing", () => {
     expect(evaluateProceduralMotion("walk", 9, 3).rootPosition[0]).toBeCloseTo(0.9);
     expect(evaluateProceduralMotion("run", -1, 0).rootPosition[0]).toBeCloseTo(-2.2);
