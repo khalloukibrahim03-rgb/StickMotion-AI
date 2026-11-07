@@ -104,18 +104,19 @@ export interface ProceduralMotionState {
 }
 
 /** Deterministic scene-local movement used by both live preview and video export. */
-export function evaluateProceduralMotion(motion: Motion, atSeconds: number, durationSeconds: number): ProceduralMotionState {
+export function evaluateProceduralMotion(motion: Motion, atSeconds: number, durationSeconds: number, travelAcrossScene = false): ProceduralMotionState {
   const time = Math.max(0, Number.isFinite(atSeconds) ? atSeconds : 0);
   const duration = Math.max(0.001, Number.isFinite(durationSeconds) ? durationSeconds : 1);
   const progress = Math.min(1, time / duration);
   const stride = motion === "run" ? 9 : 5;
   const legSwing = motion === "run" ? 0.95 : motion === "walk" ? 0.58 : 0.04;
-  const isTravelling = motion === "walk" || motion === "run";
-  const travelDistance = motion === "run" ? 4.4 : 1.8;
+  const isJumpingOver = motion === "jump" && travelAcrossScene;
+  const isTravelling = motion === "walk" || motion === "run" || isJumpingOver;
+  const travelDistance = motion === "run" ? 4.4 : isJumpingOver ? 3.6 : 1.8;
   const startX = isTravelling ? -travelDistance / 2 : 0;
   const rootX = isTravelling ? startX + travelDistance * progress : 0;
   const bodyBounce = motion === "jump"
-    ? Math.max(0, Math.sin(time * 3.2)) * 0.9
+    ? (travelAcrossScene ? Math.sin(Math.PI * progress) * 1.35 : Math.max(0, Math.sin(time * 3.2)) * 0.9)
     : Math.sin(time * (motion === "run" ? 18 : 10)) * (isTravelling ? 0.045 : 0.012);
   return {
     rootPosition: [rootX, bodyBounce, 0],
