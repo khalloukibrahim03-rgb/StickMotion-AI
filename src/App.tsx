@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { ContactShadows, Grid, OrbitControls } from "@react-three/drei";
-import { ChevronRight, Pause, Play, Plus, Save, Sparkles, Trash2, Volume2 } from "lucide-react";
+import { ChevronRight, Download, Pause, Play, Plus, Save, Sparkles, Trash2, Upload, Volume2 } from "lucide-react";
 import Stickman from "./engine/Stickman";
 import { buildStoryboard } from "./core/storyboard";
 import { createPoseKeyframe } from "./core/animation";
 import type { EvaluatedPose } from "./core/animation";
-import { createProject, createScene, type AnimationProject, type AnimationScene, type Motion } from "./core/model";
+import { createProject, createScene, isAnimationProject, type AnimationProject, type AnimationScene, type Motion } from "./core/model";
 import { listProjects, saveProject as persistProject } from "./core/storage";
 import { getPlaybackTime, setPlaybackTime } from "./core/playback";
 import { getCrossedSoundEvents, playNaturalSound, soundEffectLabels, unlockAudio } from "./core/sound";
@@ -16,6 +16,7 @@ const motions: Motion[] = ["idle", "walk", "run", "jump", "wave"];
 
 export default function App() {
   const [project, setProject] = useState<AnimationProject>(() => createProject());
+  const importInput = useRef<HTMLInputElement>(null);
   const [activeSceneId, setActiveSceneId] = useState(project.scenes[0].id);
   const [story, setStory] = useState("A curious stickman walks into a quiet room. It notices a strange object and jumps in surprise. Then it waves hello.");
   const [playing, setPlaying] = useState(true);
@@ -125,6 +126,43 @@ export default function App() {
       setRecentProjects(await listProjects());
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not save project");
+    }
+  }
+
+  function exportProject() {
+    const contents = JSON.stringify(project, null, 2);
+    const blob = new Blob([contents], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    const safeTitle = project.title.trim().replace(/[^a-z0-9-_]+/gi, "-").replace(/^-|-$/g, "") || "stickmotion-project";
+    anchor.href = url;
+    anchor.download = safeTitle + ".stickmotion.json";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setMessage("Project JSON exported");
+  }
+
+  async function importProject(file?: File) {
+    if (!file) return;
+    try {
+      const parsed: unknown = JSON.parse(await file.text());
+      if (!isAnimationProject(parsed)) {
+        setMessage("Invalid project file or unsupported schema version");
+        return;
+      }
+      setProject(parsed);
+      setActiveSceneId(parsed.scenes[0].id);
+      setPlaying(false);
+      setPlayhead(0);
+      setPlaybackTime(0);
+      setSaved(false);
+      setMessage("Imported " + parsed.title + " — save it to your local projects");
+    } catch {
+      setMessage("Could not read this project file. Choose a valid StickMotion JSON export.");
+    } finally {
+      if (importInput.current) importInput.current.value = "";
     }
   }
 
@@ -256,7 +294,7 @@ export default function App() {
       <main className="main-area">
         <header className="topbar">
           <div className="crumbs">Workspace <ChevronRight size={14}/> <strong>Animation studio</strong><span className={saved ? "save-state" : "save-state unsaved"}>{saved ? "Saved" : "Unsaved"}</span></div>
-          <div className="top-actions"><button className="save-button" onClick={() => void save()}><Save size={15}/> Save project</button></div>
+          <div className="top-actions"><input ref={importInput} className="file-input-hidden" type="file" accept=".json,application/json" aria-label="Import StickMotion project" onChange={(event) => void importProject(event.target.files?.[0])}/><button className="save-button transfer-button" onClick={() => importInput.current?.click()}><Upload size={14}/> Import JSON</button><button className="save-button transfer-button" onClick={exportProject}><Download size={14}/> Export JSON</button><button className="save-button" onClick={() => void save()}><Save size={15}/> Save project</button></div>
         </header>
 
         <section className="workspace">
