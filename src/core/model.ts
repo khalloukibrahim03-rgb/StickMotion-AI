@@ -17,9 +17,12 @@ export interface SceneSound {
   volume: number;
 }
 
+export type EasingCurve = "linear" | "ease-in" | "ease-out" | "ease-in-out";
+
 export interface PoseKeyframe {
   id: string;
   atSeconds: number;
+  easing?: EasingCurve;
   rootPosition: [number, number, number];
   leftArmRotation: [number, number, number];
   rightArmRotation: [number, number, number];
