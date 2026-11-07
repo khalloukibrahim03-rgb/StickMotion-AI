@@ -9,7 +9,7 @@ The `development` branch is the active engineering branch. The active editor she
 ### Shared core modules
 
 - `src/core/model.ts` — versioned project, character, scene, transform, and sound data contracts.
-- `src/core/storyboard.ts` — deterministic offline story-to-scene planner. This is explicitly rule-based, not a hosted AI model.
+- `src/core/storyboard.ts` — offline prompt-to-storyboard planner with English/Arabic action recognition, editable scene beats, cinematic camera framing/moves, and motion-matched natural sound cues. This is deterministic planning, not a hosted generative AI model.
 - `src/core/animation.ts` — pose keyframe creation, interpolation, and linear/ease-in/ease-out/ease-in-out curves.
 - `src/core/animation.test.ts` — unit tests for keyframe boundaries, interpolation, and easing.
 - `src/core/model.ts` — strict runtime validation for imported project files and their scenes, transforms, keyframes, and sound cues.
@@ -60,7 +60,7 @@ GitHub Actions is configured to install dependencies, run TypeScript checks, and
 
 ## Current limitations
 
-The application is not yet a production release. The story planner is rule-based rather than generative AI. The character supports procedural motions and editable full-body pose keyframes for both arms, both legs, and the root transform, with linear and eased interpolation. Scene-local natural sound cues can be previewed, edited, and triggered during forward timeline playback. Projects can be saved locally and transferred as validated JSON files. Camera keyframes now animate the live preview while playing; pause playback to orbit the camera manually and capture a new keyframe. Muxing subtitle/audio tracks into the final video, and complete MP4 export are still under development. These limitations will be removed milestone by milestone and verified before release.
+The application is not yet a production release. The prompt planner is rule-based rather than generative AI: it recognizes common English and Arabic action phrases, builds editable scene beats, suggests camera moves, and adds natural sound cues. The character supports procedural motions and editable full-body pose keyframes for both arms, both legs, and the root transform, with linear and eased interpolation. Scene-local natural sound cues can be previewed, edited, and triggered during forward timeline playback. Projects can be saved locally and transferred as validated JSON files. Camera keyframes now animate the live preview while playing; pause playback to orbit the camera manually and capture a new keyframe. Muxing subtitle/audio tracks into the final video, and complete MP4 export are still under development. These limitations will be removed milestone by milestone and verified before release.
 
 ## Roadmap
 
