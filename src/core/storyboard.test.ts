@@ -26,3 +26,16 @@ describe("prompt storyboard planner", () => {
     expect(splitStoryIntoBeats(prompt)).toHaveLength(12);
   });
 });
+
+
+describe("multi-action prompt sequencing", () => {
+  it("turns chained actions in one sentence into separate scenes", () => {
+    const beats = splitStoryIntoBeats("A stickman walks into the room and jumps in surprise, then it waves to the camera.");
+    expect(beats.map((beat) => beat.suggestedMotion)).toEqual(["walk", "jump", "wave"]);
+  });
+
+  it("separates chained Arabic actions", () => {
+    const beats = splitStoryIntoBeats("الشخصية تمشي في الغرفة ثم تقفز من المفاجأة وفي النهاية تلوح للكاميرا.");
+    expect(beats.map((beat) => beat.suggestedMotion)).toEqual(["walk", "jump", "wave"]);
+  });
+});
