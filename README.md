@@ -52,14 +52,14 @@ GitHub Actions is configured to install dependencies, run TypeScript checks, and
 
 ## Current limitations
 
-The application is not yet a production release. The story planner is rule-based rather than generative AI. The character supports procedural motions and editable full-body pose keyframes for both arms, both legs, and the root transform; keyframe interpolation is currently linear. The timeline supports scene sequencing and scene-local playback, but automatic multi-scene playback, easing curves, camera tracks, synchronized sound playback, and complete MP4 export are still under development. These limitations will be removed milestone by milestone and verified before release.
+The application is not yet a production release. The story planner is rule-based rather than generative AI. The character supports procedural motions and editable full-body pose keyframes for both arms, both legs, and the root transform; keyframe interpolation is currently linear. The timeline supports scene sequencing and continuous multi-scene playback, but easing curves, camera tracks, synchronized sound playback, and complete MP4 export are still under development. These limitations will be removed milestone by milestone and verified before release.
 
 ## Roadmap
 
 1. Stabilize the project model and local persistence.
 2. Integrate the canonical model into the editor and add project management.
 3. Expand the procedural character rig and keyframe editor with per-joint controls, editable poses, and easing curves.
-4. Implement multi-scene playback, camera controls, and a real timeline.
+4. Expand multi-scene playback with camera controls, transitions, and a real timeline.
 5. Add story planning with editable scene/action/camera suggestions.
 6. Synchronize natural sound effects and subtitles.
 7. Build complete sequence rendering and export.
