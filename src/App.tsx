@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { Canvas } from "@react-three/fiber";
 import * as THREE from "three";
 import { ContactShadows, Grid, OrbitControls } from "@react-three/drei";
@@ -264,9 +265,11 @@ export default function App() {
       return;
     }
     renderCancelRef.current = false;
-    setRendering(true);
-    setRenderProgress(0);
-    setPlaying(false);
+    flushSync(() => {
+      setRendering(true);
+      setRenderProgress(0);
+      setPlaying(false);
+    });
     try {
       if (liveCameraRef.current) {
         liveCameraRef.current.aspect = 16 / 9;
@@ -299,15 +302,18 @@ export default function App() {
         const frame = schedule[index];
         const scene = project.scenes[frame.sceneIndex];
         if (scene.id !== renderedSceneId) {
-          setActiveSceneId(scene.id);
+          flushSync(() => setActiveSceneId(scene.id));
           renderedSceneId = scene.id;
           previousSceneTime = -1 / 30;
         }
         const frameState = evaluateRenderFrame(scene, frame, previousSceneTime);
         for (const cue of frameState.soundEvents) playNaturalSound(cue.effect, cue.volume);
         previousSceneTime = frame.sceneTime;
-        setPlaybackTime(frame.sceneTime);
-        setPlayhead(frame.sceneTime);
+        // Commit the exact scene-local timestamp before the next R3F paint.
+        flushSync(() => {
+          setPlaybackTime(frame.sceneTime);
+          setPlayhead(frame.sceneTime);
+        });
         // Wait for React and the R3F frame loop to apply the exact scene-local time.
         await new Promise<void>((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
           const elapsed = window.performance.now() - frameStartedAt;
@@ -398,11 +404,13 @@ export default function App() {
         liveCameraRef.current.updateProjectionMatrix();
         if (liveRendererRef.current && liveSceneRef.current) liveRendererRef.current.render(liveSceneRef.current, liveCameraRef.current);
       }
-      setActiveSceneId(previousSceneId);
-      setPlaybackTime(previousTime);
-      setPlayhead(previousTime);
-      setPlaying(wasPlaying);
-      setRendering(false);
+      flushSync(() => {
+        setActiveSceneId(previousSceneId);
+        setPlaybackTime(previousTime);
+        setPlayhead(previousTime);
+        setPlaying(wasPlaying);
+        setRendering(false);
+      });
     }
   }
 
