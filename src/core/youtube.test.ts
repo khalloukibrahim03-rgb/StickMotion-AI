@@ -14,6 +14,12 @@ describe("YouTube export profiles", () => {
     expect(getYouTubeExportProfile("square")).toMatchObject({ width: 1080, height: 1080, fps: 30 });
   });
 
+  it("supports 24, 30 and 60 FPS export profiles", () => {
+    expect(getYouTubeExportProfile("landscape", 24).fps).toBe(24);
+    expect(getYouTubeExportProfile("landscape", 60).fps).toBe(60);
+    expect(getYouTubeExportProfile("landscape", 60).videoBitsPerSecond).toBe(24_000_000);
+  });
+
   it("uses a higher bitrate for full HD video than square output", () => {
     expect(getYouTubeExportProfile("landscape").videoBitsPerSecond).toBeGreaterThan(getYouTubeExportProfile("square").videoBitsPerSecond);
   });
