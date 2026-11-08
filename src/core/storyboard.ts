@@ -11,7 +11,7 @@ export interface StoryBeat {
 export function splitStoryIntoBeats(story: string, limit = 12): StoryBeat[] {
   const sentences = story
     .replace(/\r\n/g, "\n")
-    .split(/(?<=[.!?؟。！？])\s+|[;؛]+\s*|\n+|,\s*(?=(?:and\s+)?(?:picks?|grabs?|lifts?|puts?|places?|sets?|drops?)\b)|،\s*(?=(?:ثم\s*)?(?:يلتقط|يحمل|يرفع|يضع|يترك|يسقط))|\s+(?:and\s+then|then|after that|finally|next|ثم|بعد ذلك|وفي النهاية|وأخيرًا|and)\s+(?=(?:it\b|he\b|she\b|the stickman\b|the character\b|[a-z][a-z'-]*s\b|ي|ت|يقفز|يركض|يلوح|يلتقط|يضع))/i)
+    .split(/(?<=[.!?؟。！？])\s+|[;؛]+\s*|\n+|,\s*(?=(?:and\s+)?(?:picks?|grabs?|lifts?|puts?|places?|sets?|drops?)\b)|،\s*(?=(?:ثم\s*)?(?:يلتقط|تلتقط|يحمل|تحمل|يرفع|ترفع|يضع|تضع|يترك|تترك|يسقط|تسقط))|\s+(?:and\s+then|then|after that|finally|next|ثم|بعد ذلك|وفي النهاية|وأخيرًا|and)\s+(?=(?:it\b|he\b|she\b|the stickman\b|the character\b|[a-z][a-z'-]*s\b|ي|ت|يقفز|يركض|يلوح|يلتقط|يضع))/i)
     .map((part) => part.trim())
     .filter(Boolean)
     .slice(0, Math.max(1, limit));
