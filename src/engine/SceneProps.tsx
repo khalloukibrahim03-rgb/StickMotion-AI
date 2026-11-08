@@ -35,5 +35,5 @@ export default function SceneProps({ props, interaction, timeSeconds, durationSe
     : interaction === "place"
       ? 0.92 * (1 - smooth((progress - 0.52) / 0.34))
       : 0;
-  return <group>{props.map((prop) => <ScenePropMesh key={prop.id} prop={prop} lift={lift} />)}</group>;
+  return <group>{props.map((prop) => <ScenePropMesh key={prop.id} prop={prop} lift={prop.kind === "table" ? 0 : lift} />)}</group>;
 }
