@@ -1,4 +1,5 @@
 /** Canonical, versioned data model shared by the editor and render pipeline. */
+import type { VisualAsset } from "./media-search";
 export const PROJECT_SCHEMA_VERSION = 1 as const;
 
 export type Motion = "idle" | "walk" | "run" | "jump" | "wave";
