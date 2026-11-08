@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createProject, isAnimationProject } from "./model";
+import type { VisualAsset } from "./media-search";
 
 describe("animation project validation", () => {
   it("accepts a newly created project and its JSON round trip", () => {
@@ -107,7 +108,7 @@ describe("animation project validation", () => {
 });
 
 describe("scene visual asset validation", () => {
-  const asset = {
+  const asset: VisualAsset = {
     id: "visual-1",
     kind: "image",
     title: "Volcano",
