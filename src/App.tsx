@@ -10,7 +10,7 @@ import EnvironmentStage from "./engine/EnvironmentStage";
 import SceneProps from "./engine/SceneProps";
 import { buildStoryboard } from "./core/storyboard";
 import { buildRenderSchedule, evaluateRenderFrame, getRenderFileExtension, getRenderMimeType } from "./core/render";
-import { getYouTubeExportProfile, type YouTubeFormat } from "./core/youtube";
+import { getCenterCropRect, getYouTubeExportProfile, type YouTubeFormat } from "./core/youtube";
 import { createPoseKeyframe, evaluateCamera } from "./core/animation";
 import type { EvaluatedPose } from "./core/animation";
 import { createProject, createScene, isAnimationProject, type AnimationProject, type AnimationScene, type Motion } from "./core/model";
@@ -337,20 +337,8 @@ export default function App() {
           liveRendererRef.current.render(liveSceneRef.current, liveCameraRef.current);
         }
         compositeContext.clearRect(0, 0, compositeCanvas.width, compositeCanvas.height);
-        const sourceAspect = canvas.width / canvas.height;
-        const targetAspect = compositeCanvas.width / compositeCanvas.height;
-        let sourceX = 0;
-        let sourceY = 0;
-        let sourceWidth = canvas.width;
-        let sourceHeight = canvas.height;
-        if (sourceAspect > targetAspect) {
-          sourceWidth = canvas.height * targetAspect;
-          sourceX = (canvas.width - sourceWidth) / 2;
-        } else if (sourceAspect < targetAspect) {
-          sourceHeight = canvas.width / targetAspect;
-          sourceY = (canvas.height - sourceHeight) / 2;
-        }
-        compositeContext.drawImage(canvas, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, compositeCanvas.width, compositeCanvas.height);
+        const crop = getCenterCropRect(canvas.width, canvas.height, compositeCanvas.width, compositeCanvas.height);
+        compositeContext.drawImage(canvas, crop.x, crop.y, crop.width, crop.height, 0, 0, compositeCanvas.width, compositeCanvas.height);
         const activeCues = frameState.activeSubtitles;
         if (activeCues.length) {
           const width = compositeCanvas.width;
