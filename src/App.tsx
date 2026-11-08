@@ -14,7 +14,7 @@ import { getCenterCropRect, getYouTubeExportProfile, type YouTubeFormat, type Yo
 import { createPoseKeyframe, evaluateCamera } from "./core/animation";
 import type { EvaluatedPose } from "./core/animation";
 import { createProject, createScene, isAnimationProject, type AnimationProject, type AnimationScene, type Motion } from "./core/model";
-import { duplicateScene, moveScene } from "./core/timeline";
+import { duplicateScene, moveScene, resizeSceneDuration } from "./core/timeline";
 import { listProjects, saveProject as persistProject } from "./core/storage";
 import { getPlaybackTime, setPlaybackTime } from "./core/playback";
 import { beginAudioCapture, endAudioCapture, getCrossedSoundEvents, playNaturalSound, soundEffectLabels, unlockAudio } from "./core/sound";
@@ -238,6 +238,13 @@ export default function App() {
     updateProject({ scenes });
     setActiveSceneId(copy.id);
     setMessage("Scene duplicated with independent keyframes, subtitles, props, and sound cues");
+  }
+
+  function changeActiveSceneDuration(value: string) {
+    if (!activeScene || value.trim() === "") return;
+    const duration = Number(value);
+    if (!Number.isFinite(duration) || duration < 0.5 || duration > 120) return;
+    updateScene(resizeSceneDuration(activeScene, duration));
   }
 
   function generateStory() {
@@ -661,6 +668,7 @@ export default function App() {
               </div>
               {activeScene && <div className="scene-edit-tools">
                 <label className="scene-name-edit"><span className="field-label">SCENE NAME</span><input className="text-input" aria-label="Selected scene name" value={activeScene.name} maxLength={80} onChange={(event) => updateScene({ name: event.target.value })}/></label>
+                <label className="scene-duration-edit"><span className="field-label">DURATION (SEC)</span><input className="text-input" aria-label="Selected scene duration in seconds" type="number" min="0.5" max="120" step="0.5" value={activeScene.durationSeconds} onChange={(event) => changeActiveSceneDuration(event.target.value)}/></label>
                 <div className="scene-order-actions">
                   <button className="add-button" onClick={() => reorderActiveScene(-1)} disabled={project.scenes.findIndex((scene) => scene.id === activeSceneId) === 0} title="Move scene earlier"><ChevronUp size={14}/> Move up</button>
                   <button className="add-button" onClick={() => reorderActiveScene(1)} disabled={project.scenes.findIndex((scene) => scene.id === activeSceneId) === project.scenes.length - 1} title="Move scene later"><ChevronDown size={14}/> Move down</button>
