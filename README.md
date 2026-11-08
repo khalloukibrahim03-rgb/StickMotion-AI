@@ -101,9 +101,9 @@ The application is not yet a production release. The prompt planner is rule-base
 
 The editor includes browser-based export profiles for common YouTube formats:
 
-- **Standard video:** 1920 × 1080 (16:9), 30 FPS.
-- **YouTube Shorts:** 1080 × 1920 (9:16), 30 FPS.
-- **Square video:** 1080 × 1080 (1:1), 30 FPS.
+- **Standard video:** 1920 × 1080 (16:9).
+- **YouTube Shorts:** 1080 × 1920 (9:16).
+- **Square video:** 1080 × 1080 (1:1).
 
 Exports support selectable 24, 30, or 60 FPS. The frame schedule, capture rate, and bitrate target follow the selected frame rate; higher frame rates increase render time and file size.
 
