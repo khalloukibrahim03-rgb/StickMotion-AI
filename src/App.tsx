@@ -9,6 +9,7 @@ import CameraAnimator from "./engine/CameraAnimator";
 import EnvironmentStage from "./engine/EnvironmentStage";
 import SceneProps from "./engine/SceneProps";
 import { buildStoryboard } from "./core/storyboard";
+import { createTopicScript } from "./core/topic-script";
 import { buildRenderSchedule, evaluateRenderFrame, getFadeInOpacity, getRenderFileExtension, getRenderMimeType } from "./core/render";
 import { getCenterCropRect, getYouTubeExportProfile, type YouTubeFormat, type YouTubeFrameRate } from "./core/youtube";
 import { createPoseKeyframe, evaluateCamera } from "./core/animation";
@@ -302,12 +303,17 @@ export default function App() {
   }
 
   async function generateStory() {
-    const scenes = buildStoryboard(story);
+    const topicScript = createTopicScript(story);
+    const productionText = topicScript?.script ?? story;
+    if (topicScript) setStory(productionText);
+    const scenes = buildStoryboard(productionText);
     if (!scenes.length) {
-      setMessage("Write a story first, then generate scenes");
+      setMessage("Enter a topic or story first, then build scenes");
       return;
     }
-    setMessage("Building scenes and finding supporting Commons media…");
+    setMessage(topicScript
+      ? "Created a free offline " + (topicScript.language === "ar" ? "Arabic" : "English") + " topic script · finding visuals…"
+      : "Building scenes and finding supporting Commons media…");
     let attachedCount = 0;
     for (let index = 0; index < scenes.length; index += 1) {
       const scene = scenes[index];
@@ -870,7 +876,7 @@ export default function App() {
               </div>)}{!(activeScene?.subtitles?.length) && <small className="empty-projects">No subtitles in this scene yet.</small>}</div>
               <div className="subtitle-export-actions"><input ref={subtitleImportInput} className="file-input-hidden" type="file" accept=".srt,.vtt,text/vtt,application/x-subrip" aria-label="Import SRT or WebVTT subtitles" onChange={(event) => void importSubtitleFile(event.target.files?.[0])}/><button className="sound-add" onClick={() => subtitleImportInput.current?.click()}><Upload size={12}/> Import SRT/VTT</button><button className="sound-add" onClick={() => exportSubtitleFile("srt")}><Download size={12}/> Export SRT</button><button className="sound-add" onClick={() => exportSubtitleFile("vtt")}><Download size={12}/> Export VTT</button></div></section>
                          <section className="inspector-section media-search-section"><div className="section-heading"><h3>Supporting visuals</h3><span className="beta-tag">FREE MEDIA</span></div><p>Find openly licensed reference images and video clips from Wikimedia Commons. Check each source and license before publishing.</p><div className="media-search-row"><input className="text-input" aria-label="Search supporting media" value={mediaSearchQuery} onChange={(event) => setMediaSearchQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void searchVisualMedia(); }} placeholder="e.g. volcano eruption, solar system..."/><select className="text-input" aria-label="Media type" value={mediaSearchKind} onChange={(event) => { setMediaSearchKind(event.target.value as VisualMediaKind); setMediaSearchResults([]); }}><option value="image">Images</option><option value="video">Videos</option></select><button className="generate-button" disabled={mediaSearchLoading || mediaSearchQuery.trim().length < 2} onClick={() => void searchVisualMedia()}>{mediaSearchLoading ? "Searching…" : "Search"}</button></div><div className="media-search-results">{mediaSearchResults.map((result) => <div className="media-result" key={result.id}><img src={result.thumbnailUrl} alt={result.title} loading="lazy"/><div className="media-result-info"><strong>{result.title}</strong><small>{result.kind.toUpperCase()} · {result.license}</small><small>{result.attribution}</small><a href={result.sourceUrl} target="_blank" rel="noreferrer">View source and terms</a><button className="sound-add" onClick={() => addVisualAsset(result)}>Add to scene</button></div></div>)}{mediaSearchResults.length === 0 && <small className="empty-projects">Search to find free community media.</small>}</div><div className="attached-visuals"><strong>Scene media · {activeScene?.visualAssets?.length ?? 0}</strong>{(activeScene?.visualAssets ?? []).map((asset) => <div className="attached-visual" key={asset.id}><span>{asset.kind === "video" ? "VIDEO" : "IMAGE"} · {asset.title}<small>{asset.startSeconds.toFixed(1)}–{asset.endSeconds.toFixed(1)}s · {asset.license}</small></span><button className="icon-action" aria-label={"Remove " + asset.title} onClick={() => removeVisualAsset(asset.id)}><Trash2 size={13}/></button></div>)}</div></section>
-<section className="inspector-section story-section"><div className="section-heading"><h3>Prompt to video</h3><span className="beta-tag">STORYBOARD BETA</span></div><p>Describe the action, mood, camera shot, and setting. Build editable scenes, then search Wikimedia Commons for supporting images and video clips with source and license details. The renderer selects native MP4/H.264 when this browser supports it; otherwise it exports WebM.</p><textarea className="story-input" rows={6} value={story} onChange={(event) => setStory(event.target.value)} placeholder="Example: A curious stickman walks through a rainy neon street, notices a glowing object, jumps back in surprise, then waves to the camera. Wide opening shot, then a close-up..."/><button className="generate-button" onClick={generateStory}><Sparkles size={15}/> Build video + find visuals</button></section>
+<section className="inspector-section story-section"><div className="section-heading"><h3>Prompt to video</h3><span className="beta-tag">STORYBOARD BETA</span></div><p>Describe the action, mood, camera shot, and setting. Build editable scenes, then search Wikimedia Commons for supporting images and video clips with source and license details. The renderer selects native MP4/H.264 when this browser supports it; otherwise it exports WebM.</p><textarea className="story-input" rows={6} value={story} onChange={(event) => setStory(event.target.value)} placeholder="Enter a topic (e.g. black holes / الثقوب السوداء) or paste a full script. Short topics become a 4-part offline educational script..."/><button className="generate-button" onClick={generateStory}><Sparkles size={15}/> Build video + find visuals</button></section>
             <div className="inspector-status"><i/> {message}</div>
           </aside>
         </section>
