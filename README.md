@@ -122,3 +122,7 @@ Scene transitions include a configurable fade-in from black (off, 0.25, 0.5, 1, 
 ## Subtitle styling for YouTube exports
 
 Choose one of three caption looks in the subtitle inspector: **Classic** boxed captions, **Bold** larger captions, or **Minimal** outlined text. Captions can be positioned at the bottom or center of the frame. The selected style is applied both to the live preview and to burned-in export captions, with typography scaled to the chosen landscape, Shorts, or square output resolution. SRT/VTT sidecar exports remain plain timed text and are not affected by visual styling.
+
+## Multi-track timeline (in progress)
+
+The editor now displays scene segments with separate **Captions** and **SFX** lanes. Subtitle blocks are sized from their timed ranges, sound cues are placed at their scene-local timestamps, and selecting a cue pauses playback, selects its scene, and seeks the playhead to that cue. This is the first interactive multi-lane editing layer; drag-to-trim, drag-to-move, and imported media tracks remain planned work.
