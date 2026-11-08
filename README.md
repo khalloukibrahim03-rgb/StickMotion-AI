@@ -110,3 +110,8 @@ Exports support selectable 24, 30, or 60 FPS. The frame schedule, capture rate, 
 The renderer temporarily resizes the WebGL drawing buffer to the selected delivery dimensions and matching camera aspect ratio, then restores the editor viewport after export. This avoids stretching and preserves the requested output resolution. The bitrate target is selected per format. Timed subtitles are composited into the exported frames. Natural sound effects remain supported; the product does not add background music.
 
 Exports are limited to 90 seconds in the current browser renderer. MP4/H.264 is selected only when the browser reports support; otherwise the file is exported as WebM. Actual codec availability and recording performance depend on the browser and device.
+
+
+## Scene timeline editing
+
+The scene sequence supports renaming, duration changes, moving scenes earlier or later, duplication, and deletion. Duplicating a scene regenerates IDs for its props, subtitles, sound cues, pose keyframes, and camera keyframes so the copy can be edited independently. Shortening a scene clamps or removes timed elements that would otherwise fall outside its new duration. Scene durations can be set from 0.5 to 120 seconds; the current browser video export still enforces its separate 90-second project limit.
