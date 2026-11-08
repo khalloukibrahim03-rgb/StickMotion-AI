@@ -55,7 +55,10 @@ function inferSceneProps(text: string, motion: Motion, interaction?: SceneIntera
   if (/\b(table|desk)\b|طاولة|مكتب/.test(value)) matches.push({ kind: "table", color: "#9a6944", scale: [1, 1, 1] });
   if (/\b(pillar|column|cylinder)\b|عمود|أسطوانة/.test(value)) matches.push({ kind: "cylinder", color: "#7b91a8", scale: [0.72, 1.5, 0.72] });
   if (/\bdoor\b|باب/.test(value)) matches.push({ kind: "box", color: "#76533f", scale: [0.9, 2.5, 0.16] });
-  if (!matches.length && interaction && rememberedProp) matches.push(rememberedProp);
+  const refersToPreviousObject = /\\b(it|that|same)\\b|(?:يلتقطه|تلتقطه|يحمله|تحمله|يرفعه|ترفعه|يضعه|تضعه|يتركه|تتركه|يلتقطها|تلتقطها|يضعها|تضعها)/.test(value);
+  if (interaction && rememberedProp && refersToPreviousObject) {
+    matches.splice(0, matches.length, rememberedProp);
+  } else if (!matches.length && interaction && rememberedProp) matches.push(rememberedProp);
   if (!matches.length && /\b(strange object|mysterious object|an object)\b|شيء غريب|جسم غريب/.test(value)) {
     matches.push({ kind: "box", color: "#d4a84e", scale: [0.72, 0.72, 0.72] });
   }
