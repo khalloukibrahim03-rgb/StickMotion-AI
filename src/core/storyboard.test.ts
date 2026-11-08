@@ -77,6 +77,14 @@ describe("prompt object interaction planning", () => {
     expect(scenes[2].sounds.some((cue) => cue.effect === "setdown")).toBe(true);
   });
 
+
+  it("keeps the carried object when a placement sentence also names a surface", () => {
+    const scenes = buildStoryboard("A stickman walks to a wooden box, picks it up, then places it on the table.");
+    expect(scenes.map((scene) => scene.interaction)).toEqual([undefined, "pickup", "place"]);
+    expect(scenes[1].props?.[0].kind).toBe("box");
+    expect(scenes[2].props?.[0].kind).toBe("box");
+  });
+
   it("recognizes Arabic pickup and placement actions", () => {
     const scenes = buildStoryboard("الشخصية تمشي نحو الصندوق، تلتقطه، ثم تضعه على الأرض.");
     expect(scenes.map((scene) => scene.interaction)).toEqual([undefined, "pickup", "place"]);
