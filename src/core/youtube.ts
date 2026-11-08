@@ -15,7 +15,7 @@ export interface YouTubeExportProfile {
 export function getYouTubeExportProfile(format: YouTubeFormat, fps: YouTubeFrameRate = 30): YouTubeExportProfile {
   const profiles: Record<YouTubeFormat, YouTubeExportProfile> = {
     landscape: { format: "landscape", label: "YouTube 16:9 1080p", width: 1920, height: 1080, fps, videoBitsPerSecond: Math.round(12_000_000 * fps / 30) },
-    shorts: { format: "shorts", label: "YouTube Shorts 9:16 1080p", width: 1080, height: 1920, fps: 30, videoBitsPerSecond: 12_000_000 },
+    shorts: { format: "shorts", label: "YouTube Shorts 9:16 1080p", width: 1080, height: 1920, fps, videoBitsPerSecond: Math.round(12_000_000 * fps / 30) },
     square: { format: "square", label: "Square 1:1 1080p", width: 1080, height: 1080, fps, videoBitsPerSecond: Math.round(10_000_000 * fps / 30) },
   };
   return profiles[format];
