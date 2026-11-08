@@ -92,6 +92,11 @@ function createCinematicCamera(scene: AnimationScene, text: string, index: numbe
 
 function addSuggestedSound(scene: AnimationScene): void {
   const description = scene.description.toLocaleLowerCase();
+  if (scene.interaction === "pickup") {
+    scene.sounds.push({ id: createId("sound"), effect: "grab", atSeconds: Math.min(0.7, scene.durationSeconds * 0.35), volume: 0.56 });
+  } else if (scene.interaction === "place") {
+    scene.sounds.push({ id: createId("sound"), effect: "setdown", atSeconds: Math.min(scene.durationSeconds - 0.05, scene.durationSeconds * 0.72), volume: 0.68 });
+  }
   if (scene.environment === "night" && /\b(rain|rainy|storm|raining)\b|مطر|ممطر|عاصفة/.test(description)) {
     for (let at = 0.1; at < scene.durationSeconds; at += 0.72) {
       scene.sounds.push({ id: createId("sound"), effect: "rain", atSeconds: Number(at.toFixed(2)), volume: 0.28 });
