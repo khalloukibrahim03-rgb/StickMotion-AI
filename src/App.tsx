@@ -337,7 +337,20 @@ export default function App() {
           liveRendererRef.current.render(liveSceneRef.current, liveCameraRef.current);
         }
         compositeContext.clearRect(0, 0, compositeCanvas.width, compositeCanvas.height);
-        compositeContext.drawImage(canvas, 0, 0, compositeCanvas.width, compositeCanvas.height);
+        const sourceAspect = canvas.width / canvas.height;
+        const targetAspect = compositeCanvas.width / compositeCanvas.height;
+        let sourceX = 0;
+        let sourceY = 0;
+        let sourceWidth = canvas.width;
+        let sourceHeight = canvas.height;
+        if (sourceAspect > targetAspect) {
+          sourceWidth = canvas.height * targetAspect;
+          sourceX = (canvas.width - sourceWidth) / 2;
+        } else if (sourceAspect < targetAspect) {
+          sourceHeight = canvas.width / targetAspect;
+          sourceY = (canvas.height - sourceHeight) / 2;
+        }
+        compositeContext.drawImage(canvas, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, compositeCanvas.width, compositeCanvas.height);
         const activeCues = frameState.activeSubtitles;
         if (activeCues.length) {
           const width = compositeCanvas.width;
