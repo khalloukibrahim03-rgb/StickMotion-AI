@@ -262,6 +262,8 @@ export default function App() {
     compositeCanvas.width = exportProfile.width;
     compositeCanvas.height = exportProfile.height;
     const previousCameraAspect = liveCameraRef.current?.aspect;
+    const previousRendererSize = liveRendererRef.current?.getSize(new THREE.Vector2());
+    const previousPixelRatio = liveRendererRef.current?.getPixelRatio();
     const compositeContext = compositeCanvas.getContext("2d");
     if (!compositeContext) {
       setMessage("Could not create the video compositing surface");
@@ -274,6 +276,11 @@ export default function App() {
       setPlaying(false);
     });
     try {
+      if (liveRendererRef.current) {
+        // Render at delivery dimensions rather than stretching the editor viewport.
+        liveRendererRef.current.setPixelRatio(1);
+        liveRendererRef.current.setSize(exportProfile.width, exportProfile.height, false);
+      }
       if (liveCameraRef.current) {
         liveCameraRef.current.aspect = exportProfile.width / exportProfile.height;
         liveCameraRef.current.updateProjectionMatrix();
@@ -404,6 +411,10 @@ export default function App() {
     } finally {
       stream?.getTracks().forEach((track) => track.stop());
       endAudioCapture();
+      if (liveRendererRef.current && previousRendererSize && previousPixelRatio !== undefined) {
+        liveRendererRef.current.setPixelRatio(previousPixelRatio);
+        liveRendererRef.current.setSize(previousRendererSize.x, previousRendererSize.y, false);
+      }
       if (liveCameraRef.current && previousCameraAspect !== undefined) {
         liveCameraRef.current.aspect = previousCameraAspect;
         liveCameraRef.current.updateProjectionMatrix();
