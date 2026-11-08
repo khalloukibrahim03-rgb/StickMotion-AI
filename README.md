@@ -115,3 +115,5 @@ Exports are limited to 90 seconds in the current browser renderer. MP4/H.264 is 
 ## Scene timeline editing
 
 The scene sequence supports renaming, duration changes, moving scenes earlier or later, duplication, and deletion. Duplicating a scene regenerates IDs for its props, subtitles, sound cues, pose keyframes, and camera keyframes so the copy can be edited independently. Shortening a scene clamps or removes timed elements that would otherwise fall outside its new duration. Scene durations can be set from 0.5 to 120 seconds; the current browser video export still enforces its separate 90-second project limit.
+
+Scene transitions include a configurable fade-in from black (off, 0.25, 0.5, 1, 2, or 3 seconds). The fade is previewed in the editor and composited into rendered video while captions remain readable.
