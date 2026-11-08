@@ -1,16 +1,17 @@
-import { createId, createScene, type AnimationScene, type EnvironmentPreset, type Motion, type SceneProp } from "./model";
+import { createId, createScene, type AnimationScene, type EnvironmentPreset, type Motion, type SceneInteraction, type SceneProp } from "./model";
 
 export interface StoryBeat {
   text: string;
   suggestedMotion: Motion;
   durationSeconds: number;
+  interaction?: SceneInteraction;
 }
 
 /** Offline prompt planner: creates an editable shot list, not AI-generated video. */
 export function splitStoryIntoBeats(story: string, limit = 12): StoryBeat[] {
   const sentences = story
     .replace(/\r\n/g, "\n")
-    .split(/(?<=[.!?؟。！？])\s+|[;؛]+\s*|\n+|\s+(?:and\s+then|then|after that|finally|next|ثم|بعد ذلك|وفي النهاية|وأخيرًا|and)\s+(?=(?:it\b|he\b|she\b|the stickman\b|the character\b|[a-z][a-z'-]*s\b|ي|ت|يقفز|يركض|يلوح))/i)
+    .split(/(?<=[.!?؟。！？])\s+|[;؛]+\s*|\n+|,\s*(?=(?:and\s+)?(?:picks?|grabs?|lifts?|puts?|places?|sets?|drops?)\b)|،\s*(?=(?:ثم\s*)?(?:يلتقط|يحمل|يرفع|يضع|يترك|يسقط))|\s+(?:and\s+then|then|after that|finally|next|ثم|بعد ذلك|وفي النهاية|وأخيرًا|and)\s+(?=(?:it\b|he\b|she\b|the stickman\b|the character\b|[a-z][a-z'-]*s\b|ي|ت|يقفز|يركض|يلوح|يلتقط|يضع))/i)
     .map((part) => part.trim())
     .filter(Boolean)
     .slice(0, Math.max(1, limit));
@@ -19,7 +20,15 @@ export function splitStoryIntoBeats(story: string, limit = 12): StoryBeat[] {
     text,
     suggestedMotion: inferMotion(text),
     durationSeconds: estimateDuration(text),
+    interaction: inferInteraction(text),
   }));
+}
+
+function inferInteraction(text: string): SceneInteraction | undefined {
+  const value = text.toLocaleLowerCase();
+  if (/\b(put|puts|putting|place|places|placing|set|sets|setting|drop|drops|dropping)\s+(?:it|the\s+\w+)\s+down\b|\b(put|puts|place|places|set|sets)\s+down\b|يضع|تضع|يترك|تترك|يسقطه|تسقطه/.test(value)) return "place";
+  if (/\b(pick|picks|picked|picking)\s+(?:it|the\s+\w+)\s+up\b|\b(grab|grabs|grabbed|grabbing|lift|lifts|lifted|lifting)\b|يلتقط|تلتقط|يحمل|تحمل|يرفع|ترفع/.test(value)) return "pickup";
+  return undefined;
 }
 
 function inferMotion(text: string): Motion {
@@ -38,7 +47,7 @@ function inferEnvironment(text: string): EnvironmentPreset {
   return "studio";
 }
 
-function inferSceneProps(text: string, motion: Motion): SceneProp[] {
+function inferSceneProps(text: string, motion: Motion, interaction?: SceneInteraction, rememberedProp?: { kind: SceneProp["kind"]; color: string; scale: [number, number, number] }): SceneProp[] {
   const value = text.toLocaleLowerCase();
   const matches: Array<{ kind: SceneProp["kind"]; color: string; scale: [number, number, number] }> = [];
   if (/\b(box|crate|cube)\b|صندوق|مكعب/.test(value)) matches.push({ kind: "box", color: "#c58a52", scale: [1.05, 1.05, 1.05] });
@@ -46,13 +55,14 @@ function inferSceneProps(text: string, motion: Motion): SceneProp[] {
   if (/\b(table|desk)\b|طاولة|مكتب/.test(value)) matches.push({ kind: "table", color: "#9a6944", scale: [1, 1, 1] });
   if (/\b(pillar|column|cylinder)\b|عمود|أسطوانة/.test(value)) matches.push({ kind: "cylinder", color: "#7b91a8", scale: [0.72, 1.5, 0.72] });
   if (/\bdoor\b|باب/.test(value)) matches.push({ kind: "box", color: "#76533f", scale: [0.9, 2.5, 0.16] });
+  if (!matches.length && interaction && rememberedProp) matches.push(rememberedProp);
   if (!matches.length && /\b(strange object|mysterious object|an object)\b|شيء غريب|جسم غريب/.test(value)) {
     matches.push({ kind: "box", color: "#d4a84e", scale: [0.72, 0.72, 0.72] });
   }
   return matches.slice(0, 8).map((item, index) => ({
     id: createId("prop"),
     kind: item.kind,
-    position: [motion === "jump" ? 0.15 + (index % 3) * 0.55 : 2.25 + (index % 3) * 0.75, item.kind === "sphere" ? 0.48 : item.kind === "cylinder" ? 0.75 : 0.52, -0.4 - Math.floor(index / 3) * 1.2],
+    position: [interaction ? 0.9 + (index % 3) * 0.3 : motion === "jump" ? 0.15 + (index % 3) * 0.55 : 2.25 + (index % 3) * 0.75, item.kind === "sphere" ? 0.48 : item.kind === "cylinder" ? 0.75 : 0.52, -0.4 - Math.floor(index / 3) * 1.2],
     scale: item.scale,
     color: item.color,
   }));
@@ -104,12 +114,16 @@ function addSuggestedSound(scene: AnimationScene): void {
 }
 
 export function buildStoryboard(story: string): AnimationScene[] {
+  let rememberedProp: { kind: SceneProp["kind"]; color: string; scale: [number, number, number] } | undefined;
   return splitStoryIntoBeats(story).map((beat, index) => {
     const scene = createScene("Scene " + String(index + 1).padStart(2, "0"));
     scene.description = beat.text;
     scene.motion = beat.suggestedMotion;
     scene.environment = inferEnvironment(beat.text);
-    scene.props = inferSceneProps(beat.text, beat.suggestedMotion);
+    scene.interaction = beat.interaction;
+    scene.props = inferSceneProps(beat.text, beat.suggestedMotion, beat.interaction, rememberedProp);
+    const visibleProp = scene.props[0];
+    if (visibleProp) rememberedProp = { kind: visibleProp.kind, color: visibleProp.color, scale: [...visibleProp.scale] };
     scene.durationSeconds = beat.durationSeconds;
     createCinematicCamera(scene, beat.text, index);
     addSuggestedSound(scene);
