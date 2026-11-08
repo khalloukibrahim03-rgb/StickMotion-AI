@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildRenderSchedule, evaluateRenderFrame, getRenderFileExtension } from "./render";
+import { buildRenderSchedule, evaluateRenderFrame, getFadeInOpacity, getRenderFileExtension } from "./render";
 import { createScene } from "./model";
 
 describe("video render schedule", () => {
@@ -57,5 +57,25 @@ describe("native recording format selection", () => {
   it("uses an MP4 extension only for an MP4 recorder MIME type", () => {
     expect(getRenderFileExtension("video/mp4;codecs=avc1.42E01E")).toBe("mp4");
     expect(getRenderFileExtension("video/webm;codecs=vp9")).toBe("webm");
+  });
+});
+
+
+describe("scene fade-in transitions", () => {
+  it("starts fully black and reaches a clear frame at the configured duration", () => {
+    expect(getFadeInOpacity(0, 1)).toBe(1);
+    expect(getFadeInOpacity(0.5, 1)).toBe(0.5);
+    expect(getFadeInOpacity(1, 1)).toBe(0);
+  });
+
+  it("clamps negative scene time and disables zero-duration fades", () => {
+    expect(getFadeInOpacity(-1, 1)).toBe(1);
+    expect(getFadeInOpacity(0, 0)).toBe(0);
+    expect(getFadeInOpacity(4, 1)).toBe(0);
+  });
+
+  it("safely disables invalid values", () => {
+    expect(getFadeInOpacity(Number.NaN, 1)).toBe(0);
+    expect(getFadeInOpacity(0, Number.NaN)).toBe(0);
   });
 });
