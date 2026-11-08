@@ -62,7 +62,7 @@ function inferSceneProps(text: string, motion: Motion, interaction?: SceneIntera
   return matches.slice(0, 8).map((item, index) => ({
     id: createId("prop"),
     kind: item.kind,
-    position: [interaction ? 0.9 + (index % 3) * 0.3 : motion === "jump" ? 0.15 + (index % 3) * 0.55 : 2.25 + (index % 3) * 0.75, item.kind === "sphere" ? 0.48 : item.kind === "cylinder" ? 0.75 : 0.52, -0.4 - Math.floor(index / 3) * 1.2],
+    position: [motion === "jump" ? 0.15 + (index % 3) * 0.55 : 1.1 + (index % 3) * 0.3, item.kind === "sphere" ? 0.48 : item.kind === "cylinder" ? 0.75 : 0.52, 0.55 - Math.floor(index / 3) * 1.2],
     scale: item.scale,
     color: item.color,
   }));
