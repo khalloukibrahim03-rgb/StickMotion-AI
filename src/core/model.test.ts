@@ -8,6 +8,18 @@ describe("animation project validation", () => {
     expect(isAnimationProject(imported)).toBe(true);
   });
 
+  it("accepts valid fade-in transition settings", () => {
+    const project = createProject();
+    project.scenes[0].fadeInSeconds = 1.5;
+    expect(isAnimationProject(project)).toBe(true);
+  });
+
+  it("rejects fade-in durations outside the supported range", () => {
+    const project = createProject();
+    expect(isAnimationProject({ ...project, scenes: [{ ...project.scenes[0], fadeInSeconds: 4 }] })).toBe(false);
+    expect(isAnimationProject({ ...project, scenes: [{ ...project.scenes[0], fadeInSeconds: -1 }] })).toBe(false);
+  });
+
   it("accepts older projects without camera settings", () => {
     const project = createProject();
     const legacy = { ...project, scenes: project.scenes.map(({ camera: _camera, ...scene }) => scene) };
