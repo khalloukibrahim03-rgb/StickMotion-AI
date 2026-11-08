@@ -57,7 +57,8 @@ function inferSceneProps(text: string, motion: Motion, interaction?: SceneIntera
   if (/\bdoor\b|باب/.test(value)) matches.push({ kind: "box", color: "#76533f", scale: [0.9, 2.5, 0.16] });
   const refersToPreviousObject = /\b(it|that|same)\b|(?:يلتقطه|تلتقطه|يحمله|تحمله|يرفعه|ترفعه|يضعه|تضعه|يتركه|تتركه|يلتقطها|تلتقطها|يضعها|تضعها)/.test(value);
   if (interaction && rememberedProp && refersToPreviousObject) {
-    matches.splice(0, matches.length, rememberedProp);
+    const supportSurfaces = matches.filter((item) => item.kind === "table");
+    matches.splice(0, matches.length, rememberedProp, ...supportSurfaces);
   } else if (!matches.length && interaction && rememberedProp) matches.push(rememberedProp);
   if (!matches.length && /\b(strange object|mysterious object|an object)\b|شيء غريب|جسم غريب/.test(value)) {
     matches.push({ kind: "box", color: "#d4a84e", scale: [0.72, 0.72, 0.72] });
