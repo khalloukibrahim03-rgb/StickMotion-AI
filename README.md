@@ -105,6 +105,8 @@ The editor includes browser-based export profiles for common YouTube formats:
 - **YouTube Shorts:** 1080 × 1920 (9:16), 30 FPS.
 - **Square video:** 1080 × 1080 (1:1), 30 FPS.
 
+Exports support selectable 24, 30, or 60 FPS. The frame schedule, capture rate, and bitrate target follow the selected frame rate; higher frame rates increase render time and file size.
+
 The renderer temporarily resizes the WebGL drawing buffer to the selected delivery dimensions and matching camera aspect ratio, then restores the editor viewport after export. This avoids stretching and preserves the requested output resolution. The bitrate target is selected per format. Timed subtitles are composited into the exported frames. Natural sound effects remain supported; the product does not add background music.
 
 Exports are limited to 90 seconds in the current browser renderer. MP4/H.264 is selected only when the browser reports support; otherwise the file is exported as WebM. Actual codec availability and recording performance depend on the browser and device.
