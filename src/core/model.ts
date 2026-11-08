@@ -68,6 +68,8 @@ export interface AnimationScene {
   id: string;
   name: string;
   description: string;
+  /** Optional spoken narration for this scene; browser speech preview is not yet muxed into exports. */
+  narrationText?: string;
   durationSeconds: number;
   /** Fade from black at the beginning of this scene; 0 disables the transition. */
   fadeInSeconds?: number;
@@ -208,6 +210,7 @@ function isAnimationScene(value: unknown): value is AnimationScene {
     && typeof value.name === "string"
     && (value.fadeInSeconds === undefined || (typeof value.fadeInSeconds === "number" && Number.isFinite(value.fadeInSeconds) && value.fadeInSeconds >= 0 && value.fadeInSeconds <= 3 && value.fadeInSeconds <= duration))
     && typeof value.description === "string"
+    && (value.narrationText === undefined || (typeof value.narrationText === "string" && value.narrationText.length <= 5000))
     && motions.includes(value.motion as Motion)
     && environments.includes(value.environment as EnvironmentPreset)
     && (value.interaction === undefined || value.interaction === "pickup" || value.interaction === "place")
