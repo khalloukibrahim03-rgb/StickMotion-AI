@@ -125,4 +125,4 @@ Choose one of three caption looks in the subtitle inspector: **Classic** boxed c
 
 ## Multi-track timeline (in progress)
 
-The editor now displays scene segments with separate **Captions** and **SFX** lanes. Subtitle blocks are sized from their timed ranges, sound cues are placed at their scene-local timestamps, and selecting a cue pauses playback, selects its scene, and seeks the playhead to that cue. This is the first interactive multi-lane editing layer; drag-to-trim, drag-to-move, and imported media tracks remain planned work.
+The editor now displays scene segments with separate **Captions**, **SFX**, **Pose**, and **Camera** lanes. Subtitle blocks are sized from their timed ranges, sound cues and keyframes are placed at their scene-local timestamps, and selecting any cue pauses playback, selects its scene, and seeks the playhead to that cue. This is the first interactive multi-lane editing layer; drag-to-trim, drag-to-move, and imported media tracks remain planned work.
