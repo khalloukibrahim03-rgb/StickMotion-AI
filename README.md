@@ -1,6 +1,6 @@
 # StickMotion AI
 
-A free-first, browser-based 3D stickman animation studio. The product is being built as a real editing application: local-first projects, a 3D viewport, story-driven scene planning, an editable timeline, natural sound effects, and a dedicated render pipeline.
+A free-first, browser-based 3D animation and video-production studio. The goal is an end-to-end creator workflow: generate editable 3D scenes, edit the finished sequence with professional timeline tools, and export YouTube-ready videos—not merely generate a 3D preview.
 
 ## Current development branch
 
@@ -24,6 +24,17 @@ The `development` branch is the active engineering branch. The active editor she
 - `src/core/storage.ts` — IndexedDB project repository with save, load, list, and delete operations.
 - Project transfer — import and export versioned `.stickmotion.json` files from the editor.
 - Subtitle editing — edit caption text and scene-local start/end times, preview cues, import `.srt`/`.vtt` files into scenes, and export project-wide `.srt` or `.vtt` files.
+
+## YouTube-ready production target
+
+StickMotion AI is intended to be a complete creator/editor, not only a 3D scene generator. The production workflow must cover:
+
+1. **Create:** turn a prompt into editable 3D scenes, character motion, camera direction, and natural sound cues.
+2. **Edit:** arrange and trim scenes on a timeline; refine keyframes and camera moves; add titles, captions, transitions, and imported media; control audio levels and timing.
+3. **Publish:** choose YouTube formats (16:9 landscape, 9:16 Shorts, and 1:1 square), resolution and frame rate; render a reliable MP4/H.264 file with synchronized audio and captions; provide a clear export-quality check.
+4. **Finish:** support reusable project files and a repeatable render workflow so creators can revise a video without rebuilding it.
+
+These are product requirements, not claims that every capability is already implemented. Current editing tools include scene sequencing, character/camera keyframes, scene-local natural SFX, subtitle editing/import/export, and a browser-based 720p/30 FPS recording path. Multi-track media editing, transitions/title graphics, selectable YouTube export presets, dependable MP4/H.264 output, and complete audio muxing remain unfinished.
 
 ## Product principles
 
@@ -72,8 +83,10 @@ The application is not yet a production release. The prompt planner is rule-base
 4. Add camera presets and camera keyframe tracks to the scene timeline.
 5. Expand story planning with editable scene/action/camera suggestions.
 6. Improve natural sound effect scheduling and add subtitle tracks.
-7. Build complete sequence rendering and MP4 export.
-8. Add automated tests, browser QA, performance checks, and release documentation.
+7. Build a real multi-track video editor with clip trimming, transitions, title/graphic overlays, and imported media.
+8. Add YouTube publishing presets for landscape, Shorts, and square output, with selectable resolution/frame rate and validated MP4/H.264 plus synchronized audio.
+9. Complete sequence rendering, export recovery/progress, and browser/device compatibility checks.
+10. Add automated tests, browser QA, performance checks, and release documentation.
 
 
 ### Natural sound effects
