@@ -115,3 +115,28 @@ describe("procedural motion", () => {
     expect(evaluateProceduralMotion("run", -1, 0).rootPosition[0]).toBeCloseTo(-2.2);
   });
 });
+
+
+describe("object interaction animation", () => {
+  it("reaches and grasps smoothly during pickup", () => {
+    const start = evaluateInteractionPose("pickup", 0, 3);
+    const reach = evaluateInteractionPose("pickup", 1.2, 3);
+    const finish = evaluateInteractionPose("pickup", 2.9, 3);
+    expect(start.reach).toBe(0);
+    expect(reach.reach).toBeGreaterThan(0.9);
+    expect(Math.abs(reach.rightArmRotation[0])).toBeGreaterThan(0.5);
+    expect(finish.reach).toBeLessThan(0.01);
+  });
+
+  it("lowers the arms through a placement action", () => {
+    const reach = evaluateInteractionPose("place", 0.8, 3);
+    const release = evaluateInteractionPose("place", 2.8, 3);
+    expect(reach.reach).toBeGreaterThan(0.9);
+    expect(release.reach).toBeLessThan(0.01);
+  });
+
+  it("clamps negative and non-finite timestamps safely", () => {
+    expect(evaluateInteractionPose("pickup", -1, 3).reach).toBe(0);
+    expect(evaluateInteractionPose("place", Number.NaN, 3).reach).toBe(0);
+  });
+});
