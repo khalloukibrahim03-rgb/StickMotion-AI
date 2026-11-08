@@ -8,7 +8,7 @@ export interface TopicScript {
   script: string;
 }
 
-const ACTION_PATTERN = /\b(walk|run|jump|wave|pick|place|show|explain|discover|explore|starts|begins|ends|moves|looks|finds|learns|is|are|was|were|can|will|why|how)\b|يمشي|يركض|يقفز|يشرح|يكتشف|يعرض|يبدأ|ينتهي|لماذا|كيف|هو|هي/iu;
+const ACTION_PATTERN = /\b(walk|walks|walking|run|runs|running|jump|jumps|jumping|wave|waves|waving|pick|picks|picked|place|places|placing|show|shows|explain|explains|discover|discovers|explore|explores|starts|begins|ends|moves|looks|finds|learns|is|are|was|were|can|will|why|how)\b|يمشي|يركض|يقفز|يشرح|يكتشف|يعرض|يبدأ|ينتهي|لماذا|كيف|هو|هي/iu;
 
 function isArabic(text: string): boolean {
   return /[\u0600-\u06FF]/u.test(text);
