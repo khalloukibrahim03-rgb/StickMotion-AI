@@ -105,3 +105,32 @@ describe("animation project validation", () => {
     expect(isAnimationProject({ ...project, scenes: [{ ...project.scenes[0], fadeInSeconds: Number.NaN }] })).toBe(false);
   });
 });
+
+describe("scene visual asset validation", () => {
+  const asset = {
+    id: "visual-1",
+    kind: "image",
+    title: "Volcano",
+    mediaUrl: "https://upload.wikimedia.org/example.jpg",
+    thumbnailUrl: "https://upload.wikimedia.org/thumb.jpg",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Example.jpg",
+    license: "CC BY-SA 4.0",
+    attribution: "Example Author",
+    startSeconds: 0,
+    endSeconds: 3,
+  };
+
+  it("accepts a properly attributed remote visual asset", () => {
+    const project = createProject();
+    project.scenes[0].visualAssets = [asset];
+    expect(isAnimationProject(project)).toBe(true);
+  });
+
+  it("rejects unsafe URLs and asset ranges outside the scene", () => {
+    const project = createProject();
+    project.scenes[0].visualAssets = [{ ...asset, mediaUrl: "javascript:alert(1)" }];
+    expect(isAnimationProject(project)).toBe(false);
+    project.scenes[0].visualAssets = [{ ...asset, endSeconds: 99 }];
+    expect(isAnimationProject(project)).toBe(false);
+  });
+});
