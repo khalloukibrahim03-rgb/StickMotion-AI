@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createScene } from "./model";
 import { getFadeInOpacity } from "./render";
-import { duplicateScene, moveScene, resizeSceneDuration } from "./timeline";
+import { duplicateScene, getTimelineCuePercent, moveScene, resizeSceneDuration } from "./timeline";
 
 describe("scene timeline editing", () => {
   it("moves a scene earlier and later without losing order", () => {
@@ -78,5 +78,20 @@ describe("fade-in opacity", () => {
     expect(getFadeInOpacity(1, 0)).toBe(0);
     expect(getFadeInOpacity(1, undefined)).toBe(0);
     expect(getFadeInOpacity(Number.NaN, 1)).toBe(0);
+  });
+});
+
+describe("timeline cue positioning", () => {
+  it("maps cue times to percentages within a scene", () => {
+    expect(getTimelineCuePercent(0, 4)).toBe(0);
+    expect(getTimelineCuePercent(1, 4)).toBe(25);
+    expect(getTimelineCuePercent(4, 4)).toBe(100);
+  });
+
+  it("clamps out-of-range cue times and rejects invalid durations", () => {
+    expect(getTimelineCuePercent(-1, 4)).toBe(0);
+    expect(getTimelineCuePercent(8, 4)).toBe(100);
+    expect(() => getTimelineCuePercent(1, 0)).toThrow();
+    expect(() => getTimelineCuePercent(Number.NaN, 4)).toThrow();
   });
 });
