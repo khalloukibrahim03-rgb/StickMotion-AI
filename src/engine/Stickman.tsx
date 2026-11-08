@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { Motion, PoseKeyframe, SceneInteraction, Transform3D } from "../core/model";
-import { evaluatePose, evaluateProceduralMotion } from "../core/animation";
+import { evaluateInteractionPose, evaluatePose, evaluateProceduralMotion } from "../core/animation";
 import { getPlaybackTime } from "../core/playback";
 
 function Bone({ length, radius, color }: { length: number; radius: number; color: string }) {
@@ -40,8 +40,10 @@ export default function Stickman({ color, motion, durationSeconds, keyframes = [
       leftLeg.current?.rotation.set(...pose.leftLegRotation);
       rightLeg.current?.rotation.set(...pose.rightLegRotation);
       if (interaction) {
-        leftArm.current?.rotation.set(-0.9, 0, 0.2);
-        rightArm.current?.rotation.set(-0.9, 0, -0.2);
+        const action = evaluateInteractionPose(interaction, timeSeconds ?? getPlaybackTime(), durationSeconds);
+        leftArm.current?.rotation.set(...action.leftArmRotation);
+        rightArm.current?.rotation.set(...action.rightArmRotation);
+        if (root.current) root.current.rotation.z = transform.rotation[2] + action.bodyLean;
       }
       return;
     }
@@ -66,8 +68,10 @@ export default function Stickman({ color, motion, durationSeconds, keyframes = [
       rightArm.current.rotation.z = pose.waveArmRotation;
     }
     if (interaction) {
-      leftArm.current?.rotation.set(-0.9, 0, 0.2);
-      rightArm.current?.rotation.set(-0.9, 0, -0.2);
+      const action = evaluateInteractionPose(interaction, t, durationSeconds);
+      leftArm.current?.rotation.set(...action.leftArmRotation);
+      rightArm.current?.rotation.set(...action.rightArmRotation);
+      if (root.current) root.current.rotation.z = transform.rotation[2] + action.bodyLean;
     }
   });
 
