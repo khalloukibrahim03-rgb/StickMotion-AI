@@ -23,3 +23,21 @@ export function duplicateScene(scene: AnimationScene, name = scene.name + " copy
     cameraKeyframes: scene.cameraKeyframes?.map((frame) => ({ ...frame, id: createId("camera") })),
   };
 }
+
+/** Resize a scene while keeping every timed item valid inside its new duration. */
+export function resizeSceneDuration(scene: AnimationScene, durationSeconds: number): AnimationScene {
+  if (!Number.isFinite(durationSeconds) || durationSeconds < 0.5 || durationSeconds > 120) {
+    throw new Error("Scene duration must be between 0.5 and 120 seconds");
+  }
+  return {
+    ...scene,
+    durationSeconds,
+    sounds: scene.sounds.map((cue) => ({ ...cue, atSeconds: Math.min(cue.atSeconds, durationSeconds) })),
+    subtitles: scene.subtitles
+      ?.filter((cue) => cue.startSeconds < durationSeconds)
+      .map((cue) => ({ ...cue, endSeconds: Math.min(cue.endSeconds, durationSeconds) }))
+      .filter((cue) => cue.endSeconds > cue.startSeconds),
+    keyframes: scene.keyframes?.map((frame) => ({ ...frame, atSeconds: Math.min(frame.atSeconds, durationSeconds) })),
+    cameraKeyframes: scene.cameraKeyframes?.map((frame) => ({ ...frame, atSeconds: Math.min(frame.atSeconds, durationSeconds) })),
+  };
+}
