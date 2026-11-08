@@ -15,6 +15,7 @@ import { createPoseKeyframe, evaluateCamera } from "./core/animation";
 import type { EvaluatedPose } from "./core/animation";
 import { createProject, createScene, isAnimationProject, type AnimationProject, type AnimationScene, type Motion } from "./core/model";
 import { duplicateScene, moveScene, resizeSceneDuration } from "./core/timeline";
+import { getSubtitleRenderStyle, type SubtitlePosition, type SubtitlePreset } from "./core/subtitle-style";
 import { listProjects, saveProject as persistProject } from "./core/storage";
 import { getPlaybackTime, setPlaybackTime } from "./core/playback";
 import { beginAudioCapture, endAudioCapture, getCrossedSoundEvents, playNaturalSound, soundEffectLabels, unlockAudio } from "./core/sound";
@@ -55,6 +56,8 @@ export default function App() {
   const [renderProgress, setRenderProgress] = useState(0);
   const [youtubeFormat, setYoutubeFormat] = useState<YouTubeFormat>("landscape");
   const [youtubeFps, setYoutubeFps] = useState<YouTubeFrameRate>(30);
+  const [subtitlePreset, setSubtitlePreset] = useState<SubtitlePreset>("classic");
+  const [subtitlePosition, setSubtitlePosition] = useState<SubtitlePosition>("bottom");
   const renderCancelRef = useRef(false);
 
   const activeScene = project.scenes.find((scene) => scene.id === activeSceneId) ?? project.scenes[0];
@@ -381,8 +384,9 @@ export default function App() {
         if (activeCues.length) {
           const width = compositeCanvas.width;
           const height = compositeCanvas.height;
-          const fontSize = Math.max(18, Math.round(width * 0.027));
-          compositeContext.font = "600 " + fontSize + "px Arial, sans-serif";
+          const captionStyle = getSubtitleRenderStyle(subtitlePreset, subtitlePosition, width, height);
+          const fontSize = captionStyle.fontSize;
+          compositeContext.font = captionStyle.fontWeight + " " + fontSize + "px Arial, sans-serif";
           compositeContext.textAlign = "center";
           compositeContext.textBaseline = "middle";
           for (const cue of activeCues) {
@@ -397,18 +401,27 @@ export default function App() {
               } else line = candidate;
             }
             if (line) lines.push(line);
-            const lineHeight = fontSize * 1.35;
-            const blockHeight = lines.length * lineHeight + fontSize * 0.8;
-            const centerY = height - blockHeight * 0.72;
+            const lineHeight = fontSize * captionStyle.lineHeight;
+            const blockHeight = lines.length * lineHeight + fontSize * captionStyle.verticalPadding;
+            const centerY = height * captionStyle.verticalAnchor - blockHeight / 2;
             const maxLineWidth = Math.max(...lines.map((item) => compositeContext.measureText(item).width));
-            const boxWidth = Math.min(width * 0.9, maxLineWidth + fontSize * 1.8);
-            compositeContext.fillStyle = "rgba(8, 11, 20, 0.84)";
-            compositeContext.beginPath();
-            compositeContext.roundRect((width - boxWidth) / 2, centerY - blockHeight / 2, boxWidth, blockHeight, fontSize * 0.35);
-            compositeContext.fill();
+            const boxWidth = Math.min(width * 0.9, maxLineWidth + fontSize * captionStyle.horizontalPadding);
+            if (captionStyle.backgroundAlpha > 0) {
+              compositeContext.fillStyle = "rgba(8, 11, 20, " + captionStyle.backgroundAlpha + ")";
+              compositeContext.beginPath();
+              compositeContext.roundRect((width - boxWidth) / 2, centerY - blockHeight / 2, boxWidth, blockHeight, fontSize * 0.35);
+              compositeContext.fill();
+            }
             compositeContext.fillStyle = "#ffffff";
+            compositeContext.lineJoin = "round";
+            compositeContext.lineWidth = captionStyle.outlineWidth;
+            compositeContext.strokeStyle = "rgba(0, 0, 0, 0.9)";
             compositeContext.direction = /[\u0600-\u06FF]/.test(cue.text) ? "rtl" : "ltr";
-            lines.forEach((item, lineIndex) => compositeContext.fillText(item, width / 2, centerY - ((lines.length - 1) * lineHeight) / 2 + lineIndex * lineHeight, width * 0.84));
+            lines.forEach((item, lineIndex) => {
+              const y = centerY - ((lines.length - 1) * lineHeight) / 2 + lineIndex * lineHeight;
+              if (captionStyle.outlineWidth > 0) compositeContext.strokeText(item, width / 2, y, width * 0.84);
+              compositeContext.fillText(item, width / 2, y, width * 0.84);
+            });
           }
         }
         // Request the frame only after both the 3D scene and subtitle overlay are composed.
@@ -662,7 +675,7 @@ export default function App() {
                   <CameraAnimator settings={cameraSettings} animate={playing && !rendering && Boolean(activeScene?.cameraKeyframes?.length)} sceneId={activeSceneId}/><OrbitControls ref={(controls) => { orbitControlsRef.current = controls as unknown as { target: THREE.Vector3 } | null; }} enabled={!rendering && !(playing && Boolean(activeScene?.cameraKeyframes?.length))} target={cameraSettings.target} minDistance={3} maxDistance={12} maxPolarAngle={Math.PI / 2.02}/>
                 </Canvas>
                 <div className="scene-fade-overlay" style={{ opacity: getFadeInOpacity(playhead, activeScene?.fadeInSeconds ?? 0) }}/>
-                <div className="viewport-caption">{activeScene?.name ?? "No scene"} · {(activeScene?.motion ?? "idle").toUpperCase()}</div>{(activeScene?.subtitles ?? []).filter((cue) => playhead >= cue.startSeconds && playhead < cue.endSeconds).map((cue) => <div className="subtitle-preview" key={cue.id}>{cue.text}</div>)}
+                <div className="viewport-caption">{activeScene?.name ?? "No scene"} · {(activeScene?.motion ?? "idle").toUpperCase()}</div>{(activeScene?.subtitles ?? []).filter((cue) => playhead >= cue.startSeconds && playhead < cue.endSeconds).map((cue) => <div className={"subtitle-preview subtitle-preview-" + subtitlePreset + " subtitle-position-" + subtitlePosition} key={cue.id}>{cue.text}</div>)}
               </div>
               <div className="viewport-controls"><div>SCENE {String(Math.max(1, project.scenes.findIndex((scene) => scene.id === activeSceneId) + 1)).padStart(2, "0")} / {String(project.scenes.length).padStart(2, "0")}</div><button className="play-button" onClick={() => { if (!playing) void unlockAudio(); setPlaying((value) => !value); }}>{playing ? <Pause size={16}/> : <Play size={16}/>} {playing ? "Pause" : "Play"}</button><div>{playhead.toFixed(1)}s / {activeScene?.durationSeconds ?? 4}s · {totalDuration}s total</div></div>
             </div>
@@ -712,7 +725,7 @@ export default function App() {
               </div>
             </section>
             <section className="inspector-section sound-section"><div className="section-heading"><h3><Volume2 size={15}/> Natural sound effects</h3><span className="beta-tag">SFX</span></div><p>Place short sound cues on this scene. Audio is synthesized locally; no music is included.</p><label className="field-label">EFFECT</label><select className="text-input" value={soundEffect} onChange={(event) => setSoundEffect(event.target.value as SceneSound["effect"])}>{(Object.keys(soundEffectLabels) as SceneSound["effect"][]).map((effect) => <option key={effect} value={effect}>{soundEffectLabels[effect]}</option>)}</select><label className="field-label">VOLUME <b>{Math.round(soundVolume * 100)}%</b></label><input aria-label="Sound effect volume" className="duration-range" type="range" min="0" max="1" step="0.05" value={soundVolume} onChange={(event) => setSoundVolume(Number(event.target.value))}/><div className="sound-actions"><button className="add-button" onClick={() => void previewSound()}><Play size={13}/> Preview</button><button className="generate-button" onClick={addSoundCue}><Plus size={14}/> Add cue at {keyframeTime.toFixed(1)}s</button></div><div className="sound-cue-list">{(activeScene?.sounds ?? []).map((cue) => <div className="sound-cue" key={cue.id}><span><strong>{soundEffectLabels[cue.effect]}</strong><small>{cue.atSeconds.toFixed(1)}s · {Math.round(cue.volume * 100)}%</small><input aria-label={"Move " + soundEffectLabels[cue.effect] + " cue time"} className="duration-range cue-time-range" type="range" min="0" max={activeScene?.durationSeconds ?? 4} step="0.05" value={Math.min(cue.atSeconds, activeScene?.durationSeconds ?? 4)} onChange={(event) => updateSoundCueTime(cue.id, Number(event.target.value))}/></span><button className="icon-action" aria-label={"Delete " + soundEffectLabels[cue.effect]} onClick={() => removeSoundCue(cue.id)}><Trash2 size={14}/></button></div>)}{(activeScene?.sounds ?? []).length === 0 && <small className="empty-projects">No sound cues in this scene yet.</small>}</div></section>
-            <section className="inspector-section subtitle-section"><div className="section-heading"><h3>Subtitles</h3><span className="beta-tag">LOCAL</span></div><p>Add timed captions in Arabic or English. Preview them at the current playhead.</p><textarea className="description-input" rows={2} maxLength={500} value={subtitleDraft} onChange={(event) => setSubtitleDraft(event.target.value)} placeholder="Type a caption / اكتب الترجمة هنا..."/><button className="generate-button" disabled={!subtitleDraft.trim()} onClick={addSubtitleCue}><Plus size={14}/> Add subtitle at {playhead.toFixed(1)}s</button><div className="subtitle-cue-list">{(activeScene?.subtitles ?? []).map((cue) => <div className="subtitle-cue subtitle-cue-edit" key={cue.id}>
+            <section className="inspector-section subtitle-section"><div className="section-heading"><h3>Subtitles</h3><span className="beta-tag">LOCAL</span></div><p>Add timed captions in Arabic or English. Preview them at the current playhead.</p><div className="subtitle-style-controls"><label><span className="field-label">CAPTION STYLE</span><select className="text-input" aria-label="Subtitle style" value={subtitlePreset} onChange={(event) => setSubtitlePreset(event.target.value as SubtitlePreset)}><option value="classic">Classic · boxed</option><option value="bold">Bold · large</option><option value="minimal">Minimal · outlined</option></select></label><label><span className="field-label">POSITION</span><select className="text-input" aria-label="Subtitle position" value={subtitlePosition} onChange={(event) => setSubtitlePosition(event.target.value as SubtitlePosition)}><option value="bottom">Bottom</option><option value="center">Center</option></select></label></div><textarea className="description-input" rows={2} maxLength={500} value={subtitleDraft} onChange={(event) => setSubtitleDraft(event.target.value)} placeholder="Type a caption / اكتب الترجمة هنا..."/><button className="generate-button" disabled={!subtitleDraft.trim()} onClick={addSubtitleCue}><Plus size={14}/> Add subtitle at {playhead.toFixed(1)}s</button><div className="subtitle-cue-list">{(activeScene?.subtitles ?? []).map((cue) => <div className="subtitle-cue subtitle-cue-edit" key={cue.id}>
                 <div className="subtitle-cue-heading"><span>{cue.startSeconds.toFixed(2)}–{cue.endSeconds.toFixed(2)}s</span><button className="icon-action" aria-label="Delete subtitle" onClick={() => updateScene({subtitles:(activeScene?.subtitles ?? []).filter((item)=>item.id!==cue.id)})}><Trash2 size={13}/></button></div>
                 <input className="subtitle-text-input" aria-label="Edit subtitle text" maxLength={500} value={cue.text} onChange={(event) => updateSubtitleCue(cue.id, { text: event.target.value })}/>
                 <label className="field-label">START <b>{cue.startSeconds.toFixed(2)}s</b></label>
