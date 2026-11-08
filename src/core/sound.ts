@@ -102,6 +102,26 @@ export function playNaturalSound(effect: SoundEffect, requestedVolume = 0.7): bo
       toneGain.gain.setValueAtTime(volume * 0.45, now);
       toneGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
       break;
+    case "grab":
+      duration = 0.18;
+      filter.type = "bandpass";
+      filter.frequency.setValueAtTime(720, now);
+      filter.frequency.exponentialRampToValueAtTime(1500, now + duration * 0.55);
+      noiseGain.gain.setValueAtTime(volume * 0.42, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+      break;
+    case "setdown":
+      duration = 0.2;
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(210, now);
+      noiseGain.gain.setValueAtTime(volume * 0.62, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+      tone.type = "sine";
+      tone.frequency.setValueAtTime(84, now);
+      tone.frequency.exponentialRampToValueAtTime(42, now + duration);
+      toneGain.gain.setValueAtTime(volume * 0.38, now);
+      toneGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+      break;
     case "rain":
       duration = 0.48;
       filter.type = "highpass";
@@ -126,7 +146,7 @@ export function playNaturalSound(effect: SoundEffect, requestedVolume = 0.7): bo
   output.gain.exponentialRampToValueAtTime(0.0001, now + duration + 0.03);
   noise.start(now);
   noise.stop(now + duration + 0.04);
-  if (effect === "footstep" || effect === "landing") {
+  if (effect === "footstep" || effect === "landing" || effect === "setdown") {
     tone.start(now);
     tone.stop(now + duration + 0.03);
   }
@@ -139,6 +159,8 @@ export const soundEffectLabels: Record<SoundEffect, string> = {
   landing: "Landing",
   rain: "Rain",
   wind: "Wind",
+  grab: "Object pickup",
+  setdown: "Object set-down",
 };
 
 /** Select cues crossed by a playback tick without firing them during backward scrubbing. */
