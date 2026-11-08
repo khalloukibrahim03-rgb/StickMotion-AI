@@ -68,6 +68,8 @@ export interface AnimationScene {
   name: string;
   description: string;
   durationSeconds: number;
+  /** Fade from black at the beginning of this scene; 0 disables the transition. */
+  fadeInSeconds?: number;
   motion: Motion;
   environment: EnvironmentPreset;
   characterTransform: Transform3D;
@@ -110,6 +112,7 @@ export function createScene(name = "New scene"): AnimationScene {
     name,
     description: "",
     durationSeconds: 4,
+    fadeInSeconds: 0.5,
     motion: "idle",
     environment: "studio",
     camera: { position: [4.8, 3.2, 6.2], target: [0, 1.1, 0], fov: 42 },
@@ -201,6 +204,7 @@ function isAnimationScene(value: unknown): value is AnimationScene {
   const transform = value.characterTransform;
   return typeof value.id === "string"
     && typeof value.name === "string"
+    && (value.fadeInSeconds === undefined || (typeof value.fadeInSeconds === "number" && Number.isFinite(value.fadeInSeconds) && value.fadeInSeconds >= 0 && value.fadeInSeconds <= 3 && value.fadeInSeconds <= duration))
     && typeof value.description === "string"
     && motions.includes(value.motion as Motion)
     && environments.includes(value.environment as EnvironmentPreset)
