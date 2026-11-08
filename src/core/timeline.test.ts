@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createScene } from "./model";
+import { getFadeInOpacity } from "./render";
 import { duplicateScene, moveScene, resizeSceneDuration } from "./timeline";
 
 describe("scene timeline editing", () => {
@@ -63,5 +64,19 @@ describe("scene duration editing", () => {
     scene.fadeInSeconds = 2.5;
     const resized = resizeSceneDuration(scene, 1);
     expect(resized.fadeInSeconds).toBe(1);
+  });
+});
+
+describe("fade-in opacity", () => {
+  it("starts black and reaches full scene visibility", () => {
+    expect(getFadeInOpacity(0, 1)).toBe(1);
+    expect(getFadeInOpacity(0.5, 1)).toBe(0.5);
+    expect(getFadeInOpacity(1, 1)).toBe(0);
+  });
+
+  it("disables invalid or zero-length fades safely", () => {
+    expect(getFadeInOpacity(1, 0)).toBe(0);
+    expect(getFadeInOpacity(1, undefined)).toBe(0);
+    expect(getFadeInOpacity(Number.NaN, 1)).toBe(0);
   });
 });
