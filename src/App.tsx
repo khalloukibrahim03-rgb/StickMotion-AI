@@ -301,15 +301,39 @@ export default function App() {
     updateScene({ visualAssets: (activeScene.visualAssets ?? []).filter((asset) => asset.id !== id) });
   }
 
-  function generateStory() {
+  async function generateStory() {
     const scenes = buildStoryboard(story);
     if (!scenes.length) {
       setMessage("Write a story first, then generate scenes");
       return;
     }
+    setMessage("Building scenes and finding supporting Commons media…");
+    let attachedCount = 0;
+    for (let index = 0; index < scenes.length; index += 1) {
+      const scene = scenes[index];
+      const preferredKind: VisualMediaKind = index % 3 === 1 ? "video" : "image";
+      try {
+        let results = await searchCommonsMedia(scene.description.slice(0, 100), preferredKind);
+        if (!results.length && preferredKind === "video") {
+          results = await searchCommonsMedia(scene.description.slice(0, 100), "image");
+        }
+        const result = results[0];
+        if (result) {
+          scene.visualAssets = [{
+            ...result,
+            id: "visual_" + Math.random().toString(36).slice(2, 10),
+            startSeconds: 0,
+            endSeconds: Math.min(3, scene.durationSeconds),
+          }];
+          attachedCount += 1;
+        }
+      } catch {
+        // Keep the generated scene editable even when the public media source is unavailable.
+      }
+    }
     updateProject({ scenes });
     setActiveSceneId(scenes[0].id);
-    setMessage("Created " + scenes.length + " editable scenes using the offline story planner");
+    setMessage("Created " + scenes.length + " editable scenes · attached " + attachedCount + " openly licensed visual assets when available");
   }
 
   async function renderVideo() {
@@ -846,7 +870,7 @@ export default function App() {
               </div>)}{!(activeScene?.subtitles?.length) && <small className="empty-projects">No subtitles in this scene yet.</small>}</div>
               <div className="subtitle-export-actions"><input ref={subtitleImportInput} className="file-input-hidden" type="file" accept=".srt,.vtt,text/vtt,application/x-subrip" aria-label="Import SRT or WebVTT subtitles" onChange={(event) => void importSubtitleFile(event.target.files?.[0])}/><button className="sound-add" onClick={() => subtitleImportInput.current?.click()}><Upload size={12}/> Import SRT/VTT</button><button className="sound-add" onClick={() => exportSubtitleFile("srt")}><Download size={12}/> Export SRT</button><button className="sound-add" onClick={() => exportSubtitleFile("vtt")}><Download size={12}/> Export VTT</button></div></section>
                          <section className="inspector-section media-search-section"><div className="section-heading"><h3>Supporting visuals</h3><span className="beta-tag">FREE MEDIA</span></div><p>Find openly licensed reference images and video clips from Wikimedia Commons. Check each source and license before publishing.</p><div className="media-search-row"><input className="text-input" aria-label="Search supporting media" value={mediaSearchQuery} onChange={(event) => setMediaSearchQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void searchVisualMedia(); }} placeholder="e.g. volcano eruption, solar system..."/><select className="text-input" aria-label="Media type" value={mediaSearchKind} onChange={(event) => { setMediaSearchKind(event.target.value as VisualMediaKind); setMediaSearchResults([]); }}><option value="image">Images</option><option value="video">Videos</option></select><button className="generate-button" disabled={mediaSearchLoading || mediaSearchQuery.trim().length < 2} onClick={() => void searchVisualMedia()}>{mediaSearchLoading ? "Searching…" : "Search"}</button></div><div className="media-search-results">{mediaSearchResults.map((result) => <div className="media-result" key={result.id}><img src={result.thumbnailUrl} alt={result.title} loading="lazy"/><div className="media-result-info"><strong>{result.title}</strong><small>{result.kind.toUpperCase()} · {result.license}</small><small>{result.attribution}</small><a href={result.sourceUrl} target="_blank" rel="noreferrer">View source and terms</a><button className="sound-add" onClick={() => addVisualAsset(result)}>Add to scene</button></div></div>)}{mediaSearchResults.length === 0 && <small className="empty-projects">Search to find free community media.</small>}</div><div className="attached-visuals"><strong>Scene media · {activeScene?.visualAssets?.length ?? 0}</strong>{(activeScene?.visualAssets ?? []).map((asset) => <div className="attached-visual" key={asset.id}><span>{asset.kind === "video" ? "VIDEO" : "IMAGE"} · {asset.title}<small>{asset.startSeconds.toFixed(1)}–{asset.endSeconds.toFixed(1)}s · {asset.license}</small></span><button className="icon-action" aria-label={"Remove " + asset.title} onClick={() => removeVisualAsset(asset.id)}><Trash2 size={13}/></button></div>)}</div></section>
-<section className="inspector-section story-section"><div className="section-heading"><h3>Prompt to video</h3><span className="beta-tag">STORYBOARD BETA</span></div><p>Describe the action, mood, camera shot, and setting. Build an editable scene plan with suggested motion, camera moves, and natural sound cues. The renderer selects native MP4/H.264 when this browser supports it; otherwise it exports WebM.</p><textarea className="story-input" rows={6} value={story} onChange={(event) => setStory(event.target.value)} placeholder="Example: A curious stickman walks through a rainy neon street, notices a glowing object, jumps back in surprise, then waves to the camera. Wide opening shot, then a close-up..."/><button className="generate-button" onClick={generateStory}><Sparkles size={15}/> Build video storyboard</button></section>
+<section className="inspector-section story-section"><div className="section-heading"><h3>Prompt to video</h3><span className="beta-tag">STORYBOARD BETA</span></div><p>Describe the action, mood, camera shot, and setting. Build editable scenes, then search Wikimedia Commons for supporting images and video clips with source and license details. The renderer selects native MP4/H.264 when this browser supports it; otherwise it exports WebM.</p><textarea className="story-input" rows={6} value={story} onChange={(event) => setStory(event.target.value)} placeholder="Example: A curious stickman walks through a rainy neon street, notices a glowing object, jumps back in surprise, then waves to the camera. Wide opening shot, then a close-up..."/><button className="generate-button" onClick={generateStory}><Sparkles size={15}/> Build video + find visuals</button></section>
             <div className="inspector-status"><i/> {message}</div>
           </aside>
         </section>
