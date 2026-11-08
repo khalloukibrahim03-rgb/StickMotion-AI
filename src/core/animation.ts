@@ -108,6 +108,7 @@ export interface InteractionPose {
   leftArmRotation: [number, number, number];
   rightArmRotation: [number, number, number];
   bodyLean: number;
+  rootReach: number;
   reach: number;
 }
 
@@ -127,6 +128,7 @@ export function evaluateInteractionPose(interaction: SceneInteraction, atSeconds
     leftArmRotation: [-0.38 * reach, 0, 0.18 * reach],
     rightArmRotation: [-1.05 * reach + 0.2 * liftOrLower, 0, -0.22 * reach],
     bodyLean: 0.16 * reach,
+    rootReach: 0.52 * reach,
     reach,
   };
 }
