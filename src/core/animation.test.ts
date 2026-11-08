@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createPoseKeyframe, evaluateCamera, evaluatePose, evaluateProceduralMotion } from "./animation";
+import { createPoseKeyframe, evaluateCamera, evaluateInteractionPose, evaluatePose, evaluateProceduralMotion } from "./animation";
 
 describe("pose keyframe interpolation", () => {
   it("returns the first pose before the first keyframe", () => {
