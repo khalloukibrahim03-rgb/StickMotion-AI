@@ -9,7 +9,7 @@ import CameraAnimator from "./engine/CameraAnimator";
 import EnvironmentStage from "./engine/EnvironmentStage";
 import SceneProps from "./engine/SceneProps";
 import { buildStoryboard } from "./core/storyboard";
-import { buildRenderSchedule, evaluateRenderFrame, getRenderMimeType } from "./core/render";
+import { buildRenderSchedule, evaluateRenderFrame, getRenderFileExtension, getRenderMimeType } from "./core/render";
 import { createPoseKeyframe, evaluateCamera } from "./core/animation";
 import type { EvaluatedPose } from "./core/animation";
 import { createProject, createScene, isAnimationProject, type AnimationProject, type AnimationScene, type Motion } from "./core/model";
@@ -386,10 +386,11 @@ export default function App() {
         const anchor = document.createElement("a");
         const safeTitle = project.title.trim().replace(/[^a-z0-9-_]+/gi, "-") || "stickmotion-video";
         anchor.href = url;
-        anchor.download = safeTitle + ".webm";
+        const fileExtension = getRenderFileExtension(mimeType);
+        anchor.download = safeTitle + "." + fileExtension;
         anchor.click();
         window.setTimeout(() => URL.revokeObjectURL(url), 30000);
-        setMessage("Video exported as WebM · 30 FPS · timed subtitles" + (hasCapturedAudio ? " · natural sound effects included" : " · browser audio capture unavailable"));
+        setMessage("Video exported as " + fileExtension.toUpperCase() + " · 30 FPS · timed subtitles" + (hasCapturedAudio ? " · natural sound effects included" : " · browser audio capture unavailable"));
       } else {
         setMessage("Video render cancelled");
       }
@@ -663,7 +664,7 @@ export default function App() {
                 <button className="cue-time" onClick={() => { setPlaying(false); setPlayhead(cue.startSeconds); setPlaybackTime(cue.startSeconds); }}>Preview from start</button>
               </div>)}{!(activeScene?.subtitles?.length) && <small className="empty-projects">No subtitles in this scene yet.</small>}</div>
               <div className="subtitle-export-actions"><input ref={subtitleImportInput} className="file-input-hidden" type="file" accept=".srt,.vtt,text/vtt,application/x-subrip" aria-label="Import SRT or WebVTT subtitles" onChange={(event) => void importSubtitleFile(event.target.files?.[0])}/><button className="sound-add" onClick={() => subtitleImportInput.current?.click()}><Upload size={12}/> Import SRT/VTT</button><button className="sound-add" onClick={() => exportSubtitleFile("srt")}><Download size={12}/> Export SRT</button><button className="sound-add" onClick={() => exportSubtitleFile("vtt")}><Download size={12}/> Export VTT</button></div></section>
-            <section className="inspector-section story-section"><div className="section-heading"><h3>Prompt to video</h3><span className="beta-tag">STORYBOARD BETA</span></div><p>Describe the action, mood, camera shot, and setting. Build an editable scene plan with suggested motion, camera moves, and natural sound cues. WebM export is available; MP4/H.264 export is not connected yet.</p><textarea className="story-input" rows={6} value={story} onChange={(event) => setStory(event.target.value)} placeholder="Example: A curious stickman walks through a rainy neon street, notices a glowing object, jumps back in surprise, then waves to the camera. Wide opening shot, then a close-up..."/><button className="generate-button" onClick={generateStory}><Sparkles size={15}/> Build video storyboard</button></section>
+            <section className="inspector-section story-section"><div className="section-heading"><h3>Prompt to video</h3><span className="beta-tag">STORYBOARD BETA</span></div><p>Describe the action, mood, camera shot, and setting. Build an editable scene plan with suggested motion, camera moves, and natural sound cues. The renderer selects native MP4/H.264 when this browser supports it; otherwise it exports WebM.</p><textarea className="story-input" rows={6} value={story} onChange={(event) => setStory(event.target.value)} placeholder="Example: A curious stickman walks through a rainy neon street, notices a glowing object, jumps back in surprise, then waves to the camera. Wide opening shot, then a close-up..."/><button className="generate-button" onClick={generateStory}><Sparkles size={15}/> Build video storyboard</button></section>
             <div className="inspector-status"><i/> {message}</div>
           </aside>
         </section>
