@@ -45,7 +45,7 @@ export default function Stickman({ color, motion, durationSeconds, keyframes = [
         rightArm.current?.rotation.set(...action.rightArmRotation);
         if (root.current) {
           root.current.rotation.z = transform.rotation[2] + action.bodyLean;
-          root.current.position.x += action.rootReach;
+          root.current.position.x = pose.rootPosition[0] + transform.position[0] + action.rootReach;
         }
       }
       return;
@@ -76,7 +76,7 @@ export default function Stickman({ color, motion, durationSeconds, keyframes = [
       rightArm.current?.rotation.set(...action.rightArmRotation);
       if (root.current) {
         root.current.rotation.z = transform.rotation[2] + action.bodyLean;
-        root.current.position.x += action.rootReach;
+        root.current.position.x = pose.rootPosition[0] + transform.position[0] + action.rootReach;
       }
     }
   });
