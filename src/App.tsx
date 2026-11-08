@@ -597,7 +597,7 @@ export default function App() {
               <div className="viewport">
                 <Canvas shadows dpr={2} gl={{ preserveDrawingBuffer: true }} camera={{ position: cameraSettings.position, fov: cameraSettings.fov }} onCreated={({ camera, gl, scene }) => { if (camera instanceof THREE.PerspectiveCamera) liveCameraRef.current = camera; liveRendererRef.current = gl; liveSceneRef.current = scene; }}>
                   <EnvironmentStage environment={activeScene?.environment ?? "studio"}/>
-                  <SceneProps props={activeScene?.props ?? []} interaction={activeScene?.interaction} timeSeconds={rendering ? playhead : playbackTime} durationSeconds={activeScene?.durationSeconds ?? 4}/>
+                  <SceneProps props={activeScene?.props ?? []} interaction={activeScene?.interaction} timeSeconds={rendering ? playhead : undefined} durationSeconds={activeScene?.durationSeconds ?? 4}/>
                   <ambientLight intensity={activeScene?.environment === "night" ? 0.48 : activeScene?.environment === "nature" ? 0.88 : 0.75}/>
                   <directionalLight position={[4, 8, 5]} color={activeScene?.environment === "night" ? "#aab8ff" : activeScene?.environment === "nature" ? "#fff0cf" : "#ffffff"} intensity={activeScene?.environment === "night" ? 1.25 : 2.1} castShadow shadow-mapSize={[1024, 1024]}/>
                   {activeScene?.environment === "studio" && <Grid position={[0, -0.03, 0]} args={[18, 18]} cellSize={0.5} cellColor="#343b52" sectionColor="#59627d" fadeDistance={20} infiniteGrid/>}
