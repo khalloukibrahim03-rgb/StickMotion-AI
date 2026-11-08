@@ -43,7 +43,10 @@ export default function Stickman({ color, motion, durationSeconds, keyframes = [
         const action = evaluateInteractionPose(interaction, timeSeconds ?? getPlaybackTime(), durationSeconds);
         leftArm.current?.rotation.set(...action.leftArmRotation);
         rightArm.current?.rotation.set(...action.rightArmRotation);
-        if (root.current) root.current.rotation.z = transform.rotation[2] + action.bodyLean;
+        if (root.current) {
+          root.current.rotation.z = transform.rotation[2] + action.bodyLean;
+          root.current.position.x += action.rootReach;
+        }
       }
       return;
     }
@@ -71,7 +74,10 @@ export default function Stickman({ color, motion, durationSeconds, keyframes = [
       const action = evaluateInteractionPose(interaction, t, durationSeconds);
       leftArm.current?.rotation.set(...action.leftArmRotation);
       rightArm.current?.rotation.set(...action.rightArmRotation);
-      if (root.current) root.current.rotation.z = transform.rotation[2] + action.bodyLean;
+      if (root.current) {
+        root.current.rotation.z = transform.rotation[2] + action.bodyLean;
+        root.current.position.x += action.rootReach;
+      }
     }
   });
 
