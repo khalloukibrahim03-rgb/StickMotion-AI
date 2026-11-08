@@ -1,4 +1,5 @@
 import type { SceneInteraction, SceneProp } from "../core/model";
+import { getPlaybackTime } from "../core/playback";
 
 function ScenePropMesh({ prop, lift = 0 }: { prop: SceneProp; lift?: number }) {
   if (prop.kind === "table") {
@@ -22,8 +23,9 @@ function ScenePropMesh({ prop, lift = 0 }: { prop: SceneProp; lift?: number }) {
   </mesh>;
 }
 
-export default function SceneProps({ props, interaction, timeSeconds = 0, durationSeconds = 4 }: { props: SceneProp[]; interaction?: SceneInteraction; timeSeconds?: number; durationSeconds?: number }) {
-  const progress = Math.min(1, Math.max(0, timeSeconds / Math.max(0.001, durationSeconds)));
+export default function SceneProps({ props, interaction, timeSeconds, durationSeconds = 4 }: { props: SceneProp[]; interaction?: SceneInteraction; timeSeconds?: number; durationSeconds?: number }) {
+  const currentTime = timeSeconds ?? getPlaybackTime();
+  const progress = Math.min(1, Math.max(0, currentTime / Math.max(0.001, durationSeconds)));
   const smooth = (value: number) => {
     const t = Math.min(1, Math.max(0, value));
     return t * t * (3 - 2 * t);
