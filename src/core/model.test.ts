@@ -90,4 +90,18 @@ describe("animation project validation", () => {
     };
     expect(isAnimationProject(malformed)).toBe(false);
   });
+
+  it("accepts a valid scene fade-in and rejects values beyond scene duration", () => {
+    const project = createProject();
+    const valid = { ...project, scenes: [{ ...project.scenes[0], fadeInSeconds: 1 }] };
+    const invalid = { ...project, scenes: [{ ...project.scenes[0], fadeInSeconds: 5 }] };
+    expect(isAnimationProject(valid)).toBe(true);
+    expect(isAnimationProject(invalid)).toBe(false);
+  });
+
+  it("rejects negative or non-finite fade-in durations", () => {
+    const project = createProject();
+    expect(isAnimationProject({ ...project, scenes: [{ ...project.scenes[0], fadeInSeconds: -1 }] })).toBe(false);
+    expect(isAnimationProject({ ...project, scenes: [{ ...project.scenes[0], fadeInSeconds: Number.NaN }] })).toBe(false);
+  });
 });
