@@ -1,4 +1,4 @@
-import type { CameraKeyframe, CameraSettings, Motion, PoseKeyframe } from "./model";
+import type { CameraKeyframe, CameraSettings, Motion, PoseKeyframe, SceneInteraction } from "./model";
 
 export type EvaluatedPose = Omit<PoseKeyframe, "id" | "atSeconds" | "easing">;
 
@@ -102,6 +102,33 @@ export interface ProceduralMotionState {
   bodyBounce: number;
   waveArmRotation: number;
   leftArmRotationZ: number;
+}
+
+export interface InteractionPose {
+  leftArmRotation: [number, number, number];
+  rightArmRotation: [number, number, number];
+  bodyLean: number;
+  reach: number;
+}
+
+/** A deterministic reach/grasp/release cycle, evaluated from scene-local time. */
+export function evaluateInteractionPose(interaction: SceneInteraction, atSeconds: number, durationSeconds: number): InteractionPose {
+  const duration = Math.max(0.001, Number.isFinite(durationSeconds) ? durationSeconds : 1);
+  const progress = Math.min(1, Math.max(0, (Number.isFinite(atSeconds) ? atSeconds : 0) / duration));
+  const smooth = (value: number) => {
+    const t = Math.min(1, Math.max(0, value));
+    return t * t * (3 - 2 * t);
+  };
+  const reach = interaction === "pickup"
+    ? smooth(progress / 0.34) * (1 - smooth((progress - 0.68) / 0.2))
+    : smooth(progress / 0.22) * (1 - smooth((progress - 0.5) / 0.18));
+  const liftOrLower = interaction === "pickup" ? smooth((progress - 0.3) / 0.38) : 1 - smooth((progress - 0.48) / 0.38);
+  return {
+    leftArmRotation: [-0.38 * reach, 0, 0.18 * reach],
+    rightArmRotation: [-1.05 * reach + 0.2 * liftOrLower, 0, -0.22 * reach],
+    bodyLean: 0.16 * reach,
+    reach,
+  };
 }
 
 /** Deterministic scene-local movement used by both live preview and video export. */
