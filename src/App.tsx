@@ -14,7 +14,7 @@ import { getCenterCropRect, getYouTubeExportProfile, type YouTubeFormat, type Yo
 import { createPoseKeyframe, evaluateCamera } from "./core/animation";
 import type { EvaluatedPose } from "./core/animation";
 import { createProject, createScene, isAnimationProject, type AnimationProject, type AnimationScene, type Motion } from "./core/model";
-import { duplicateScene, moveScene, resizeSceneDuration } from "./core/timeline";
+import { duplicateScene, getTimelineCuePercent, moveScene, resizeSceneDuration } from "./core/timeline";
 import { getSubtitleRenderStyle, type SubtitlePosition, type SubtitlePreset } from "./core/subtitle-style";
 import { listProjects, saveProject as persistProject } from "./core/storage";
 import { getPlaybackTime, setPlaybackTime } from "./core/playback";
@@ -58,6 +58,7 @@ export default function App() {
   const [youtubeFps, setYoutubeFps] = useState<YouTubeFrameRate>(30);
   const [subtitlePreset, setSubtitlePreset] = useState<SubtitlePreset>("classic");
   const [subtitlePosition, setSubtitlePosition] = useState<SubtitlePosition>("bottom");
+  const [pendingSceneSeek, setPendingSceneSeek] = useState<{ sceneId: string; atSeconds: number } | null>(null);
   const renderCancelRef = useRef(false);
 
   const activeScene = project.scenes.find((scene) => scene.id === activeSceneId) ?? project.scenes[0];
@@ -111,11 +112,12 @@ export default function App() {
       setKeyframeTime(0);
       return;
     }
-    setPlayhead(0);
-    setPlaybackTime(0);
+    setPlayhead(pendingSceneSeek?.sceneId === activeSceneId ? pendingSceneSeek.atSeconds : 0);
+    setPlaybackTime(pendingSceneSeek?.sceneId === activeSceneId ? pendingSceneSeek.atSeconds : 0);
+    if (pendingSceneSeek?.sceneId === activeSceneId) setPendingSceneSeek(null);
     setSelectedKeyframeId(null);
     setKeyframeTime(0);
-  }, [activeSceneId, rendering]);
+  }, [activeSceneId, rendering, pendingSceneSeek]);
 
   useEffect(() => {
     void listProjects().then(setRecentProjects).catch(() => setMessage("Local project storage is unavailable in this browser"));
@@ -218,6 +220,17 @@ export default function App() {
     updateScene({ subtitles: [...(activeScene.subtitles ?? []), { id: "sub_" + Math.random().toString(36).slice(2,10), text, startSeconds, endSeconds }] });
     setSubtitleDraft("");
     setMessage("Subtitle added to scene at " + startSeconds.toFixed(2) + "s");
+  }
+
+  function seekTimelineCue(sceneId: string, atSeconds: number) {
+    setPlaying(false);
+    if (sceneId === activeSceneId) {
+      setPlayhead(atSeconds);
+      setPlaybackTime(atSeconds);
+      return;
+    }
+    setPendingSceneSeek({ sceneId, atSeconds });
+    setActiveSceneId(sceneId);
   }
 
   function addScene() {
@@ -684,6 +697,13 @@ export default function App() {
               <div className="timeline-heading"><div><h2>Timeline</h2><small>SCENE SEQUENCE</small></div><button className="add-button" onClick={addScene}><Plus size={14}/> Add scene</button></div>
               <div className="timeline-track">
                 {project.scenes.map((scene, index) => <button key={scene.id} className={scene.id === activeSceneId ? "scene-card selected" : "scene-card"} style={{ flex: Math.max(1, scene.durationSeconds) }} onClick={() => setActiveSceneId(scene.id)}><small>{String(index + 1).padStart(2, "0")} · {scene.durationSeconds}s</small><strong>{scene.name}</strong><span>{scene.motion}</span></button>)}
+              </div>
+              <div className="timeline-lanes" aria-label="Multi-track timeline">
+                {project.scenes.map((scene, index) => <div className={scene.id === activeSceneId ? "timeline-lane-scene active" : "timeline-lane-scene"} key={scene.id} style={{ flex: Math.max(1, scene.durationSeconds) }}>
+                  <button className="timeline-lane-title" onClick={() => setActiveSceneId(scene.id)}>{String(index + 1).padStart(2, "0")} · {scene.name}</button>
+                  <div className="timeline-lane-row"><span className="timeline-lane-label">CAPTIONS</span><div className="timeline-lane-track">{(scene.subtitles ?? []).map((cue) => <button key={cue.id} className="timeline-cue caption-cue" title={cue.text + " · " + cue.startSeconds.toFixed(1) + "s"} style={{ left: getTimelineCuePercent(cue.startSeconds, scene.durationSeconds) + "%", width: Math.max(4, getTimelineCuePercent(cue.endSeconds - cue.startSeconds, scene.durationSeconds)) + "%" }} onClick={() => seekTimelineCue(scene.id, cue.startSeconds)}>{cue.text}</button>)}</div></div>
+                  <div className="timeline-lane-row"><span className="timeline-lane-label">SFX</span><div className="timeline-lane-track">{scene.sounds.map((cue) => <button key={cue.id} className="timeline-cue sound-cue-marker" title={soundEffectLabels[cue.effect] + " · " + cue.atSeconds.toFixed(1) + "s"} style={{ left: getTimelineCuePercent(cue.atSeconds, scene.durationSeconds) + "%" }} onClick={() => seekTimelineCue(scene.id, cue.atSeconds)}>{soundEffectLabels[cue.effect]}</button>)}</div></div>
+                </div>)}
               </div>
               {activeScene && <div className="scene-edit-tools">
                 <label className="scene-name-edit"><span className="field-label">SCENE NAME</span><input className="text-input" aria-label="Selected scene name" value={activeScene.name} maxLength={80} onChange={(event) => updateScene({ name: event.target.value })}/></label>
