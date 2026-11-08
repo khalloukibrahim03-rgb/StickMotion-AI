@@ -32,6 +32,7 @@ export function resizeSceneDuration(scene: AnimationScene, durationSeconds: numb
   return {
     ...scene,
     durationSeconds,
+    fadeInSeconds: scene.fadeInSeconds === undefined ? undefined : Math.min(scene.fadeInSeconds, durationSeconds),
     sounds: scene.sounds.map((cue) => ({ ...cue, atSeconds: Math.min(cue.atSeconds, durationSeconds) })),
     subtitles: scene.subtitles
       ?.filter((cue) => cue.startSeconds < durationSeconds)
