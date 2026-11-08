@@ -354,6 +354,7 @@ export default function App() {
     const productionText = topicScript?.script ?? story;
     if (topicScript) setStory(productionText);
     const scenes = buildStoryboard(productionText);
+    scenes.forEach((scene) => { scene.narrationText = scene.description; });
     if (!scenes.length) {
       setMessage("Enter a topic or story first, then build scenes");
       return;
