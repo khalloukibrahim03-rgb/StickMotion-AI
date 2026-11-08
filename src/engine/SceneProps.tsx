@@ -31,7 +31,7 @@ export default function SceneProps({ props, interaction, timeSeconds, durationSe
     return t * t * (3 - 2 * t);
   };
   const lift = interaction === "pickup"
-    ? 0.92 * smooth((progress - 0.18) / 0.34)
+    ? 0.92 * smooth((progress - 0.3) / 0.38)
     : interaction === "place"
       ? 0.92 * (1 - smooth((progress - 0.52) / 0.34))
       : 0;
