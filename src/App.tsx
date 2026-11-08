@@ -10,6 +10,7 @@ import EnvironmentStage from "./engine/EnvironmentStage";
 import SceneProps from "./engine/SceneProps";
 import { buildStoryboard } from "./core/storyboard";
 import { buildRenderSchedule, evaluateRenderFrame, getRenderFileExtension, getRenderMimeType } from "./core/render";
+import { getYouTubeExportProfile, type YouTubeFormat } from "./core/youtube";
 import { createPoseKeyframe, evaluateCamera } from "./core/animation";
 import type { EvaluatedPose } from "./core/animation";
 import { createProject, createScene, isAnimationProject, type AnimationProject, type AnimationScene, type Motion } from "./core/model";
@@ -51,6 +52,7 @@ export default function App() {
   const [recentProjects, setRecentProjects] = useState<AnimationProject[]>([]);
   const [rendering, setRendering] = useState(false);
   const [renderProgress, setRenderProgress] = useState(0);
+  const [youtubeFormat, setYoutubeFormat] = useState<YouTubeFormat>("landscape");
   const renderCancelRef = useRef(false);
 
   const activeScene = project.scenes.find((scene) => scene.id === activeSceneId) ?? project.scenes[0];
@@ -238,12 +240,13 @@ export default function App() {
       setMessage("Video recording is not supported by this browser");
       return;
     }
-    const schedule = buildRenderSchedule(project.scenes, 30);
+    const exportProfile = getYouTubeExportProfile(youtubeFormat);
+    const schedule = buildRenderSchedule(project.scenes, exportProfile.fps);
     if (!schedule.length) {
       setMessage("Add at least one scene before rendering");
       return;
     }
-    if (schedule.length > 30 * 90) {
+    if (schedule.length > exportProfile.fps * 90) {
       setMessage("This browser renderer is limited to 90 seconds per export");
       return;
     }
@@ -256,8 +259,8 @@ export default function App() {
     let recorder: MediaRecorder | null = null;
     const compositeCanvas = document.createElement("canvas");
     // Export a standard HD frame size regardless of the editor panel's dimensions.
-    compositeCanvas.width = 1280;
-    compositeCanvas.height = 720;
+    compositeCanvas.width = exportProfile.width;
+    compositeCanvas.height = exportProfile.height;
     const previousCameraAspect = liveCameraRef.current?.aspect;
     const compositeContext = compositeCanvas.getContext("2d");
     if (!compositeContext) {
@@ -272,21 +275,21 @@ export default function App() {
     });
     try {
       if (liveCameraRef.current) {
-        liveCameraRef.current.aspect = 16 / 9;
+        liveCameraRef.current.aspect = exportProfile.width / exportProfile.height;
         liveCameraRef.current.updateProjectionMatrix();
       }
       let videoStream = compositeCanvas.captureStream(0);
       let manualVideoTrack = videoStream.getVideoTracks()[0] as (MediaStreamTrack & { requestFrame?: () => void }) | undefined;
       if (typeof manualVideoTrack?.requestFrame !== "function") {
         videoStream.getTracks().forEach((track) => track.stop());
-        videoStream = compositeCanvas.captureStream(30);
+        videoStream = compositeCanvas.captureStream(exportProfile.fps);
         manualVideoTrack = undefined;
       }
       const audioUnlocked = await unlockAudio();
       const audioStream = audioUnlocked ? beginAudioCapture() : null;
       const hasCapturedAudio = Boolean(audioStream?.getAudioTracks().length);
       stream = new MediaStream([...videoStream.getVideoTracks(), ...(audioStream?.getAudioTracks() ?? [])]);
-      recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
+      recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: exportProfile.videoBitsPerSecond });
       recorder.ondataavailable = (event) => { if (event.data.size > 0) chunks.push(event.data); };
       const stopped = new Promise<void>((resolve, reject) => {
         if (!recorder) return reject(new Error("Recorder could not start"));
@@ -295,7 +298,7 @@ export default function App() {
       });
       recorder.start(500);
       let renderedSceneId = "";
-      let previousSceneTime = -1 / 30;
+      let previousSceneTime = -1 / exportProfile.fps;
       for (let index = 0; index < schedule.length; index += 1) {
         if (renderCancelRef.current) break;
         const frameStartedAt = window.performance.now();
@@ -304,7 +307,7 @@ export default function App() {
         if (scene.id !== renderedSceneId) {
           flushSync(() => setActiveSceneId(scene.id));
           renderedSceneId = scene.id;
-          previousSceneTime = -1 / 30;
+          previousSceneTime = -1 / exportProfile.fps;
         }
         const frameState = evaluateRenderFrame(scene, frame, previousSceneTime);
         for (const cue of frameState.soundEvents) playNaturalSound(cue.effect, cue.volume);
@@ -317,7 +320,7 @@ export default function App() {
         // Wait for React and the R3F frame loop to apply the exact scene-local time.
         await new Promise<void>((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
           const elapsed = window.performance.now() - frameStartedAt;
-          window.setTimeout(resolve, Math.max(0, 1000 / 30 - elapsed));
+          window.setTimeout(resolve, Math.max(0, 1000 / exportProfile.fps - elapsed));
         })));
         // Apply the camera after scene effects have run, so a scene switch cannot overwrite this frame's camera.
         const frameCamera = frameState.camera;
@@ -390,7 +393,7 @@ export default function App() {
         anchor.download = safeTitle + "." + fileExtension;
         anchor.click();
         window.setTimeout(() => URL.revokeObjectURL(url), 30000);
-        setMessage("Video exported as " + fileExtension.toUpperCase() + " · 30 FPS · timed subtitles" + (hasCapturedAudio ? " · natural sound effects included" : " · browser audio capture unavailable"));
+        setMessage("Video exported as " + fileExtension.toUpperCase() + " · " + exportProfile.label + " · " + exportProfile.fps + " FPS · timed subtitles" + (hasCapturedAudio ? " · natural sound effects included" : " · browser audio capture unavailable"));
       } else {
         setMessage("Video render cancelled");
       }
@@ -595,7 +598,7 @@ export default function App() {
       <main className="main-area">
         <header className="topbar">
           <div className="crumbs">Workspace <ChevronRight size={14}/> <strong>Animation studio</strong><span className={saved ? "save-state" : "save-state unsaved"}>{saved ? "Saved" : "Unsaved"}</span></div>
-          <div className="top-actions"><button className="save-button render-button" disabled={rendering} onClick={() => void renderVideo()}><Download size={14}/>{rendering ? "Rendering " + renderProgress + "%" : "Render video"}</button>{rendering && <button className="save-button cancel-render-button" onClick={cancelRender}>Cancel</button>}<input ref={importInput} className="file-input-hidden" type="file" accept=".json,application/json" aria-label="Import StickMotion project" onChange={(event) => void importProject(event.target.files?.[0])}/><button className="save-button transfer-button" onClick={() => importInput.current?.click()}><Upload size={14}/> Import JSON</button><button className="save-button transfer-button" onClick={exportProject}><Download size={14}/> Export JSON</button><button className="save-button" onClick={() => void save()}><Save size={15}/> Save project</button></div>
+          <div className="top-actions"><label className="export-preset-label">YOUTUBE <select aria-label="YouTube export format" value={youtubeFormat} disabled={rendering} onChange={(event) => setYoutubeFormat(event.target.value as YouTubeFormat)}><option value="landscape">16:9 · 1080p</option><option value="shorts">9:16 Shorts</option><option value="square">1:1 Square</option></select></label><button className="save-button render-button" disabled={rendering} onClick={() => void renderVideo()}><Download size={14}/>{rendering ? "Rendering " + renderProgress + "%" : "Render video"}</button>{rendering && <button className="save-button cancel-render-button" onClick={cancelRender}>Cancel</button>}<input ref={importInput} className="file-input-hidden" type="file" accept=".json,application/json" aria-label="Import StickMotion project" onChange={(event) => void importProject(event.target.files?.[0])}/><button className="save-button transfer-button" onClick={() => importInput.current?.click()}><Upload size={14}/> Import JSON</button><button className="save-button transfer-button" onClick={exportProject}><Download size={14}/> Export JSON</button><button className="save-button" onClick={() => void save()}><Save size={15}/> Save project</button></div>
         </header>
 
         <section className="workspace">
