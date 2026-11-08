@@ -34,3 +34,5 @@
 
 .scene-duration-edit{display:flex;flex:0 0 112px;flex-direction:column;gap:7px}.scene-duration-edit .text-input{width:100%;box-sizing:border-box}
 @media(max-width:680px){.scene-duration-edit{flex:1}}
+
+.scene-fade-overlay{position:absolute;inset:0;background:#000;pointer-events:none;z-index:2}.subtitle-preview{z-index:3}.scene-fade-edit{min-width:105px;flex:0 1 130px}
