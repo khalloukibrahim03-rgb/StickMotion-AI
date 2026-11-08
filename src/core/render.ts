@@ -30,10 +30,14 @@ export function buildRenderSchedule(scenes: AnimationScene[], fps = 30): RenderF
 
 export function getRenderMimeType(): string | null {
   if (typeof MediaRecorder === "undefined") return null;
-  const candidates = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
+  const candidates = ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4", "video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
   return candidates.find((type) => MediaRecorder.isTypeSupported(type)) ?? null;
 }
 
+
+export function getRenderFileExtension(mimeType: string): "mp4" | "webm" {
+  return mimeType.toLowerCase().startsWith("video/mp4") ? "mp4" : "webm";
+}
 
 export interface RenderFrameState {
   camera: CameraSettings;
