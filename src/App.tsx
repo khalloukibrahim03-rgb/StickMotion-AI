@@ -9,7 +9,7 @@ import CameraAnimator from "./engine/CameraAnimator";
 import EnvironmentStage from "./engine/EnvironmentStage";
 import SceneProps from "./engine/SceneProps";
 import { buildStoryboard } from "./core/storyboard";
-import { buildRenderSchedule, evaluateRenderFrame, getRenderFileExtension, getRenderMimeType } from "./core/render";
+import { buildRenderSchedule, evaluateRenderFrame, getFadeInOpacity, getRenderFileExtension, getRenderMimeType } from "./core/render";
 import { getCenterCropRect, getYouTubeExportProfile, type YouTubeFormat, type YouTubeFrameRate } from "./core/youtube";
 import { createPoseKeyframe, evaluateCamera } from "./core/animation";
 import type { EvaluatedPose } from "./core/animation";
@@ -372,6 +372,11 @@ export default function App() {
         compositeContext.clearRect(0, 0, compositeCanvas.width, compositeCanvas.height);
         const crop = getCenterCropRect(canvas.width, canvas.height, compositeCanvas.width, compositeCanvas.height);
         compositeContext.drawImage(canvas, crop.x, crop.y, crop.width, crop.height, 0, 0, compositeCanvas.width, compositeCanvas.height);
+        const fadeOpacity = getFadeInOpacity(frame.sceneTime, scene.fadeInSeconds ?? 0);
+        if (fadeOpacity > 0) {
+          compositeContext.fillStyle = "rgba(0, 0, 0, " + fadeOpacity + ")";
+          compositeContext.fillRect(0, 0, compositeCanvas.width, compositeCanvas.height);
+        }
         const activeCues = frameState.activeSubtitles;
         if (activeCues.length) {
           const width = compositeCanvas.width;
@@ -656,6 +661,7 @@ export default function App() {
                   <ContactShadows position={[0, -0.045, 0]} opacity={0.38} scale={5} blur={2.4} far={2}/>
                   <CameraAnimator settings={cameraSettings} animate={playing && !rendering && Boolean(activeScene?.cameraKeyframes?.length)} sceneId={activeSceneId}/><OrbitControls ref={(controls) => { orbitControlsRef.current = controls as unknown as { target: THREE.Vector3 } | null; }} enabled={!rendering && !(playing && Boolean(activeScene?.cameraKeyframes?.length))} target={cameraSettings.target} minDistance={3} maxDistance={12} maxPolarAngle={Math.PI / 2.02}/>
                 </Canvas>
+                <div className="scene-fade-overlay" style={{ opacity: getFadeInOpacity(playhead, activeScene?.fadeInSeconds ?? 0) }}/>
                 <div className="viewport-caption">{activeScene?.name ?? "No scene"} · {(activeScene?.motion ?? "idle").toUpperCase()}</div>{(activeScene?.subtitles ?? []).filter((cue) => playhead >= cue.startSeconds && playhead < cue.endSeconds).map((cue) => <div className="subtitle-preview" key={cue.id}>{cue.text}</div>)}
               </div>
               <div className="viewport-controls"><div>SCENE {String(Math.max(1, project.scenes.findIndex((scene) => scene.id === activeSceneId) + 1)).padStart(2, "0")} / {String(project.scenes.length).padStart(2, "0")}</div><button className="play-button" onClick={() => { if (!playing) void unlockAudio(); setPlaying((value) => !value); }}>{playing ? <Pause size={16}/> : <Play size={16}/>} {playing ? "Pause" : "Play"}</button><div>{playhead.toFixed(1)}s / {activeScene?.durationSeconds ?? 4}s · {totalDuration}s total</div></div>
@@ -669,6 +675,7 @@ export default function App() {
               {activeScene && <div className="scene-edit-tools">
                 <label className="scene-name-edit"><span className="field-label">SCENE NAME</span><input className="text-input" aria-label="Selected scene name" value={activeScene.name} maxLength={80} onChange={(event) => updateScene({ name: event.target.value })}/></label>
                 <label className="scene-duration-edit"><span className="field-label">DURATION (SEC)</span><input className="text-input" aria-label="Selected scene duration in seconds" type="number" min="0.5" max="120" step="0.5" value={activeScene.durationSeconds} onChange={(event) => changeActiveSceneDuration(event.target.value)}/></label>
+                <label className="scene-fade-edit"><span className="field-label">FADE IN</span><select className="text-input" aria-label="Scene fade in duration" value={activeScene.fadeInSeconds ?? 0} onChange={(event) => updateScene({ fadeInSeconds: Number(event.target.value) })}><option value={0}>Off</option><option value={0.25}>0.25 sec</option><option value={0.5}>0.5 sec</option><option value={1}>1 sec</option><option value={2}>2 sec</option><option value={3}>3 sec</option></select></label>
                 <div className="scene-order-actions">
                   <button className="add-button" onClick={() => reorderActiveScene(-1)} disabled={project.scenes.findIndex((scene) => scene.id === activeSceneId) === 0} title="Move scene earlier"><ChevronUp size={14}/> Move up</button>
                   <button className="add-button" onClick={() => reorderActiveScene(1)} disabled={project.scenes.findIndex((scene) => scene.id === activeSceneId) === project.scenes.length - 1} title="Move scene later"><ChevronDown size={14}/> Move down</button>
