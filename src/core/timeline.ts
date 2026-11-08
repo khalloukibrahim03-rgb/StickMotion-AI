@@ -42,3 +42,11 @@ export function resizeSceneDuration(scene: AnimationScene, durationSeconds: numb
     cameraKeyframes: scene.cameraKeyframes?.map((frame) => ({ ...frame, atSeconds: Math.min(frame.atSeconds, durationSeconds) })),
   };
 }
+
+/** Convert a cue timestamp into a clamped percentage within its scene lane. */
+export function getTimelineCuePercent(atSeconds: number, durationSeconds: number): number {
+  if (!Number.isFinite(atSeconds) || !Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+    throw new Error("Timeline cue time and scene duration must be finite; duration must be positive");
+  }
+  return Math.max(0, Math.min(100, (atSeconds / durationSeconds) * 100));
+}
