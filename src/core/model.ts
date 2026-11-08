@@ -20,7 +20,7 @@ export interface SubtitleCue {
 
 export interface SceneSound {
   id: string;
-  effect: "footstep" | "whoosh" | "landing" | "rain" | "wind";
+  effect: "footstep" | "whoosh" | "landing" | "rain" | "wind" | "grab" | "setdown";
   atSeconds: number;
   volume: number;
 }
@@ -151,7 +151,7 @@ function isVector3(value: unknown): value is [number, number, number] {
 
 const motions: Motion[] = ["idle", "walk", "run", "jump", "wave"];
 const environments: EnvironmentPreset[] = ["studio", "night", "nature"];
-const soundEffects: SceneSound["effect"][] = ["footstep", "whoosh", "landing", "rain", "wind"];
+const soundEffects: SceneSound["effect"][] = ["footstep", "whoosh", "landing", "rain", "wind", "grab", "setdown"];
 const easingCurves: EasingCurve[] = ["linear", "ease-in", "ease-out", "ease-in-out"];
 
 function isSceneProp(value: unknown): value is SceneProp {
