@@ -117,3 +117,8 @@ Exports are limited to 90 seconds in the current browser renderer. MP4/H.264 is 
 The scene sequence supports renaming, duration changes, moving scenes earlier or later, duplication, and deletion. Duplicating a scene regenerates IDs for its props, subtitles, sound cues, pose keyframes, and camera keyframes so the copy can be edited independently. Shortening a scene clamps or removes timed elements that would otherwise fall outside its new duration. Scene durations can be set from 0.5 to 120 seconds; the current browser video export still enforces its separate 90-second project limit.
 
 Scene transitions include a configurable fade-in from black (off, 0.25, 0.5, 1, 2, or 3 seconds). The fade is previewed in the editor and composited into rendered video while captions remain readable.
+
+
+## Subtitle styling for YouTube exports
+
+Choose one of three caption looks in the subtitle inspector: **Classic** boxed captions, **Bold** larger captions, or **Minimal** outlined text. Captions can be positioned at the bottom or center of the frame. The selected style is applied both to the live preview and to burned-in export captions, with typography scaled to the chosen landscape, Shorts, or square output resolution. SRT/VTT sidecar exports remain plain timed text and are not affected by visual styling.
