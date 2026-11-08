@@ -64,3 +64,21 @@ describe("prompt-generated 3D scene props", () => {
     expect(scenes.map((scene) => scene.props?.map((prop) => prop.kind))).toEqual([["box"], ["sphere"]]);
   });
 });
+
+
+describe("prompt object interaction planning", () => {
+  it("splits pickup and place actions and keeps the referenced object in view", () => {
+    const scenes = buildStoryboard("A stickman walks to a wooden box, picks it up, and puts it down.");
+    expect(scenes.map((scene) => scene.interaction)).toEqual([undefined, "pickup", "place"]);
+    expect(scenes[1].props?.[0].kind).toBe("box");
+    expect(scenes[2].props?.[0].kind).toBe("box");
+    expect(scenes[1].props?.[0].position[0]).toBeCloseTo(0.9);
+  });
+
+  it("recognizes Arabic pickup and placement actions", () => {
+    const scenes = buildStoryboard("الشخصية تمشي نحو الصندوق، تلتقطه، ثم تضعه على الأرض.");
+    expect(scenes.map((scene) => scene.interaction)).toEqual([undefined, "pickup", "place"]);
+    expect(scenes[1].props?.[0].kind).toBe("box");
+    expect(scenes[2].props?.[0].kind).toBe("box");
+  });
+});
