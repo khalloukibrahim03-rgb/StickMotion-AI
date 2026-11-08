@@ -3,7 +3,7 @@ import { flushSync } from "react-dom";
 import { Canvas } from "@react-three/fiber";
 import * as THREE from "three";
 import { ContactShadows, Grid, OrbitControls } from "@react-three/drei";
-import { ChevronRight, Download, Pause, Play, Plus, Save, Sparkles, Trash2, Upload, Volume2 } from "lucide-react";
+import { ChevronDown, ChevronRight, ChevronUp, Copy, Download, Pause, Play, Plus, Save, Sparkles, Trash2, Upload, Volume2 } from "lucide-react";
 import Stickman from "./engine/Stickman";
 import CameraAnimator from "./engine/CameraAnimator";
 import EnvironmentStage from "./engine/EnvironmentStage";
@@ -14,6 +14,7 @@ import { getCenterCropRect, getYouTubeExportProfile, type YouTubeFormat } from "
 import { createPoseKeyframe, evaluateCamera } from "./core/animation";
 import type { EvaluatedPose } from "./core/animation";
 import { createProject, createScene, isAnimationProject, type AnimationProject, type AnimationScene, type Motion } from "./core/model";
+import { duplicateScene, moveScene } from "./core/timeline";
 import { listProjects, saveProject as persistProject } from "./core/storage";
 import { getPlaybackTime, setPlaybackTime } from "./core/playback";
 import { beginAudioCapture, endAudioCapture, getCrossedSoundEvents, playNaturalSound, soundEffectLabels, unlockAudio } from "./core/sound";
@@ -219,6 +220,23 @@ export default function App() {
     const scene = createScene("Scene " + String(project.scenes.length + 1).padStart(2, "0"));
     updateProject({ scenes: [...project.scenes, scene] });
     setActiveSceneId(scene.id);
+  }
+
+  function reorderActiveScene(direction: -1 | 1) {
+    if (!activeScene) return;
+    const next = moveScene(project.scenes, activeScene.id, direction);
+    if (next !== project.scenes) updateProject({ scenes: next });
+  }
+
+  function duplicateActiveScene() {
+    if (!activeScene) return;
+    const copy = duplicateScene(activeScene, activeScene.name + " copy");
+    const index = project.scenes.findIndex((scene) => scene.id === activeScene.id);
+    const scenes = [...project.scenes];
+    scenes.splice(index + 1, 0, copy);
+    updateProject({ scenes });
+    setActiveSceneId(copy.id);
+    setMessage("Scene duplicated with independent keyframes, subtitles, props, and sound cues");
   }
 
   function generateStory() {
@@ -640,6 +658,15 @@ export default function App() {
               <div className="timeline-track">
                 {project.scenes.map((scene, index) => <button key={scene.id} className={scene.id === activeSceneId ? "scene-card selected" : "scene-card"} style={{ flex: Math.max(1, scene.durationSeconds) }} onClick={() => setActiveSceneId(scene.id)}><small>{String(index + 1).padStart(2, "0")} · {scene.durationSeconds}s</small><strong>{scene.name}</strong><span>{scene.motion}</span></button>)}
               </div>
+              {activeScene && <div className="scene-edit-tools">
+                <label className="scene-name-edit"><span className="field-label">SCENE NAME</span><input className="text-input" aria-label="Selected scene name" value={activeScene.name} maxLength={80} onChange={(event) => updateScene({ name: event.target.value })}/></label>
+                <div className="scene-order-actions">
+                  <button className="add-button" onClick={() => reorderActiveScene(-1)} disabled={project.scenes.findIndex((scene) => scene.id === activeSceneId) === 0} title="Move scene earlier"><ChevronUp size={14}/> Move up</button>
+                  <button className="add-button" onClick={() => reorderActiveScene(1)} disabled={project.scenes.findIndex((scene) => scene.id === activeSceneId) === project.scenes.length - 1} title="Move scene later"><ChevronDown size={14}/> Move down</button>
+                  <button className="add-button" onClick={duplicateActiveScene}><Copy size={14}/> Duplicate</button>
+                  <button className="add-button scene-delete-action" onClick={removeScene} disabled={project.scenes.length <= 1}><Trash2 size={14}/> Delete</button>
+                </div>
+              </div>}
               <div className="keyframe-tools"><div><label className="field-label">KEYFRAME TIME <b>{keyframeTime.toFixed(1)}s</b></label><input aria-label="Keyframe time" className="duration-range" type="range" min="0" max={Math.max(0.1, activeScene?.durationSeconds ?? 4)} step="0.1" value={Math.min(keyframeTime, activeScene?.durationSeconds ?? 4)} onChange={(event) => setKeyframeTime(Number(event.target.value))}/></div><div className="keyframe-easing"><label className="field-label">INTERPOLATION CURVE</label><select className="text-input" aria-label="Keyframe interpolation curve" value={keyframeEasing} onChange={(event) => setKeyframeEasing(event.target.value as "linear" | "ease-in" | "ease-out" | "ease-in-out")}><option value="linear">Linear</option><option value="ease-in">Ease in</option><option value="ease-out">Ease out</option><option value="ease-in-out">Ease in &amp; out</option></select><small>Controls the motion from this keyframe to the next.</small></div><div className="keyframe-pose">
                   <label className="field-label">LEFT ARM <b>{keyframeLeftArm}°</b></label><input aria-label="Left arm rotation" className="duration-range" type="range" min="-150" max="150" step="5" value={keyframeLeftArm} onChange={(event) => setKeyframeLeftArm(Number(event.target.value))}/>
                   <label className="field-label">RIGHT ARM <b>{keyframeRightArm}°</b></label><input aria-label="Right arm rotation" className="duration-range" type="range" min="-150" max="150" step="5" value={keyframeRightArm} onChange={(event) => setKeyframeRightArm(Number(event.target.value))}/>
