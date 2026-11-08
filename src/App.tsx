@@ -36,6 +36,9 @@ export default function App() {
   const orbitControlsRef = useRef<{ target: THREE.Vector3 } | null>(null);
   const [activeSceneId, setActiveSceneId] = useState(project.scenes[0].id);
   const [subtitleDraft, setSubtitleDraft] = useState("");
+  const [speechVoices, setSpeechVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [selectedVoiceURI, setSelectedVoiceURI] = useState("");
+  const [narrationRate, setNarrationRate] = useState(1);
   const [story, setStory] = useState("A curious stickman walks into a quiet room. It notices a strange object and jumps in surprise. Then it waves hello.");
   const [playing, setPlaying] = useState(true);
   const [playhead, setPlayhead] = useState(0);
@@ -110,6 +113,18 @@ export default function App() {
     frame = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(frame);
   }, [playing, activeSceneId, activeScene?.durationSeconds, project.scenes]);
+
+  useEffect(() => {
+    if (!("speechSynthesis" in window)) return;
+    const refreshVoices = () => setSpeechVoices(window.speechSynthesis.getVoices());
+    refreshVoices();
+    window.speechSynthesis.addEventListener?.("voiceschanged", refreshVoices);
+    return () => window.speechSynthesis.removeEventListener?.("voiceschanged", refreshVoices);
+  }, []);
+
+  useEffect(() => () => {
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+  }, []);
 
   useEffect(() => {
     // Rendering drives the playhead frame-by-frame; do not reset it when the
@@ -217,6 +232,38 @@ export default function App() {
       ].sort((left, right) => left.atSeconds - right.atSeconds),
     });
     setMessage("Captured live camera view at " + frame.atSeconds.toFixed(2) + "s");
+  }
+
+  function previewNarration() {
+    if (!activeScene) return;
+    if (!("speechSynthesis" in window)) {
+      setMessage("Speech preview is not supported by this browser");
+      return;
+    }
+    const text = (activeScene.narrationText ?? "").trim()
+      || (activeScene.subtitles ?? []).slice().sort((a, b) => a.startSeconds - b.startSeconds).map((cue) => cue.text).join(" ");
+    if (!text) {
+      setMessage("Add narration text or subtitles to this scene first");
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    const language = /[\\u0600-\\u06FF]/u.test(text) ? "ar" : "en";
+    utterance.lang = language;
+    utterance.rate = narrationRate;
+    const chosenVoice = speechVoices.find((voice) => voice.voiceURI === selectedVoiceURI);
+    const matchingVoice = speechVoices.find((voice) => voice.lang.toLowerCase().startsWith(language));
+    if (chosenVoice) utterance.voice = chosenVoice;
+    else if (matchingVoice) utterance.voice = matchingVoice;
+    utterance.onstart = () => setMessage("Narration preview playing · " + utterance.lang);
+    utterance.onend = () => setMessage("Narration preview finished · audio is not yet included in video export");
+    utterance.onerror = () => setMessage("Narration preview could not be played by this browser");
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function stopNarration() {
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+    setMessage("Narration preview stopped");
   }
 
   function addSubtitleCue() {
@@ -875,6 +922,7 @@ export default function App() {
                 <button className="cue-time" onClick={() => { setPlaying(false); setPlayhead(cue.startSeconds); setPlaybackTime(cue.startSeconds); }}>Preview from start</button>
               </div>)}{!(activeScene?.subtitles?.length) && <small className="empty-projects">No subtitles in this scene yet.</small>}</div>
               <div className="subtitle-export-actions"><input ref={subtitleImportInput} className="file-input-hidden" type="file" accept=".srt,.vtt,text/vtt,application/x-subrip" aria-label="Import SRT or WebVTT subtitles" onChange={(event) => void importSubtitleFile(event.target.files?.[0])}/><button className="sound-add" onClick={() => subtitleImportInput.current?.click()}><Upload size={12}/> Import SRT/VTT</button><button className="sound-add" onClick={() => exportSubtitleFile("srt")}><Download size={12}/> Export SRT</button><button className="sound-add" onClick={() => exportSubtitleFile("vtt")}><Download size={12}/> Export VTT</button></div></section>
+                         <section className="inspector-section narration-section"><div className="section-heading"><h3>Voice narration</h3><span className="beta-tag">BROWSER PREVIEW</span></div><p>Write the spoken line for this scene, then preview it with a voice installed in your browser. Arabic and English are detected automatically. Browser speech is a preview only and is not yet included in exported video files.</p><textarea className="description-input" rows={4} maxLength={5000} value={activeScene?.narrationText ?? ""} onChange={(event) => updateScene({ narrationText: event.target.value })} placeholder="Write narration for this scene… / اكتب التعليق الصوتي لهذا المشهد…"/><label className="field-label">VOICE</label><select className="text-input" aria-label="Narration voice" value={selectedVoiceURI} onChange={(event) => setSelectedVoiceURI(event.target.value)}><option value="">Automatic · match narration language</option>{speechVoices.map((voice) => <option key={voice.voiceURI} value={voice.voiceURI}>{voice.name} · {voice.lang}{voice.default ? " · default" : ""}</option>)}</select><label className="field-label">SPEAKING SPEED <b>{narrationRate.toFixed(1)}×</b></label><input className="duration-range" aria-label="Narration speaking speed" type="range" min="0.7" max="1.3" step="0.1" value={narrationRate} onChange={(event) => setNarrationRate(Number(event.target.value))}/><div className="subtitle-export-actions"><button className="sound-add" disabled={!activeScene?.narrationText?.trim() && !(activeScene?.subtitles?.length)} onClick={previewNarration}><Volume2 size={12}/> Preview voice</button><button className="sound-add" onClick={stopNarration}>Stop voice</button></div>{speechVoices.length === 0 && <small className="empty-projects">No browser voices are available yet. Check your operating system's speech settings.</small>}</section>
                          <section className="inspector-section media-search-section"><div className="section-heading"><h3>Supporting visuals</h3><span className="beta-tag">FREE MEDIA</span></div><p>Find openly licensed reference images and video clips from Wikimedia Commons. Check each source and license before publishing.</p><div className="media-search-row"><input className="text-input" aria-label="Search supporting media" value={mediaSearchQuery} onChange={(event) => setMediaSearchQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void searchVisualMedia(); }} placeholder="e.g. volcano eruption, solar system..."/><select className="text-input" aria-label="Media type" value={mediaSearchKind} onChange={(event) => { setMediaSearchKind(event.target.value as VisualMediaKind); setMediaSearchResults([]); }}><option value="image">Images</option><option value="video">Videos</option></select><button className="generate-button" disabled={mediaSearchLoading || mediaSearchQuery.trim().length < 2} onClick={() => void searchVisualMedia()}>{mediaSearchLoading ? "Searching…" : "Search"}</button></div><div className="media-search-results">{mediaSearchResults.map((result) => <div className="media-result" key={result.id}><img src={result.thumbnailUrl} alt={result.title} loading="lazy"/><div className="media-result-info"><strong>{result.title}</strong><small>{result.kind.toUpperCase()} · {result.license}</small><small>{result.attribution}</small><a href={result.sourceUrl} target="_blank" rel="noreferrer">View source and terms</a><button className="sound-add" onClick={() => addVisualAsset(result)}>Add to scene</button></div></div>)}{mediaSearchResults.length === 0 && <small className="empty-projects">Search to find free community media.</small>}</div><div className="attached-visuals"><strong>Scene media · {activeScene?.visualAssets?.length ?? 0}</strong>{(activeScene?.visualAssets ?? []).map((asset) => <div className="attached-visual" key={asset.id}><span>{asset.kind === "video" ? "VIDEO" : "IMAGE"} · {asset.title}<small>{asset.startSeconds.toFixed(1)}–{asset.endSeconds.toFixed(1)}s · {asset.license}</small></span><button className="icon-action" aria-label={"Remove " + asset.title} onClick={() => removeVisualAsset(asset.id)}><Trash2 size={13}/></button></div>)}</div></section>
 <section className="inspector-section story-section"><div className="section-heading"><h3>Prompt to video</h3><span className="beta-tag">STORYBOARD BETA</span></div><p>Describe the action, mood, camera shot, and setting. Build editable scenes, then search Wikimedia Commons for supporting images and video clips with source and license details. The renderer selects native MP4/H.264 when this browser supports it; otherwise it exports WebM.</p><textarea className="story-input" rows={6} value={story} onChange={(event) => setStory(event.target.value)} placeholder="Enter a topic (e.g. black holes / الثقوب السوداء) or paste a full script. Short topics become a 4-part offline educational script..."/><button className="generate-button" onClick={generateStory}><Sparkles size={15}/> Build video + find visuals</button></section>
             <div className="inspector-status"><i/> {message}</div>
