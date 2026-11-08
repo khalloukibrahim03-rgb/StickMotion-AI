@@ -72,6 +72,7 @@ export default function App() {
     () => project.scenes.reduce((total, scene) => total + scene.durationSeconds, 0),
     [project.scenes],
   );
+  const activeVisualAssets = (activeScene?.visualAssets ?? []).filter((asset) => playhead >= asset.startSeconds && playhead < asset.endSeconds);
 
   useEffect(() => {
     if (!playing) return;
@@ -336,6 +337,7 @@ export default function App() {
     const chunks: BlobPart[] = [];
     let stream: MediaStream | null = null;
     let recorder: MediaRecorder | null = null;
+    const visualElements = new Map<string, HTMLImageElement | HTMLVideoElement>();
     const compositeCanvas = document.createElement("canvas");
     // Export a standard HD frame size regardless of the editor panel's dimensions.
     compositeCanvas.width = exportProfile.width;
@@ -363,6 +365,32 @@ export default function App() {
       if (liveCameraRef.current) {
         liveCameraRef.current.aspect = exportProfile.width / exportProfile.height;
         liveCameraRef.current.updateProjectionMatrix();
+      }
+      const visualAssets = project.scenes.flatMap((scene) => scene.visualAssets ?? []);
+      for (const asset of visualAssets) {
+        if (visualElements.has(asset.id)) continue;
+        if (asset.kind === "image") {
+          const element = new Image();
+          element.crossOrigin = "anonymous";
+          await new Promise<void>((resolve, reject) => {
+            element.onload = () => resolve();
+            element.onerror = () => reject(new Error("Could not load visual asset: " + asset.title));
+            element.src = asset.mediaUrl;
+          });
+          visualElements.set(asset.id, element);
+        } else {
+          const element = document.createElement("video");
+          element.crossOrigin = "anonymous";
+          element.muted = true;
+          element.preload = "auto";
+          await new Promise<void>((resolve, reject) => {
+            element.onloadeddata = () => resolve();
+            element.onerror = () => reject(new Error("This browser cannot decode video asset: " + asset.title));
+            element.src = asset.mediaUrl;
+            element.load();
+          });
+          visualElements.set(asset.id, element);
+        }
       }
       let videoStream = compositeCanvas.captureStream(0);
       let manualVideoTrack = videoStream.getVideoTracks()[0] as (MediaStreamTrack & { requestFrame?: () => void }) | undefined;
@@ -429,6 +457,29 @@ export default function App() {
         if (fadeOpacity > 0) {
           compositeContext.fillStyle = "rgba(0, 0, 0, " + fadeOpacity + ")";
           compositeContext.fillRect(0, 0, compositeCanvas.width, compositeCanvas.height);
+        }
+        for (const asset of (scene.visualAssets ?? []).filter((item) => frame.sceneTime >= item.startSeconds && frame.sceneTime < item.endSeconds)) {
+          const element = visualElements.get(asset.id);
+          if (!element) continue;
+          if (element instanceof HTMLVideoElement) {
+            const targetTime = Math.max(0, frame.sceneTime - asset.startSeconds);
+            if (Number.isFinite(element.duration)) {
+              const boundedTime = Math.min(targetTime, Math.max(0, element.duration - 0.04));
+              if (Math.abs(element.currentTime - boundedTime) > 0.04) {
+                await new Promise<void>((resolve) => {
+                  element.addEventListener("seeked", () => resolve(), { once: true });
+                  element.currentTime = boundedTime;
+                });
+              }
+            }
+          }
+          const mediaWidth = element instanceof HTMLVideoElement ? element.videoWidth : element.naturalWidth;
+          const mediaHeight = element instanceof HTMLVideoElement ? element.videoHeight : element.naturalHeight;
+          if (!mediaWidth || !mediaHeight) continue;
+          const scale = Math.max(compositeCanvas.width / mediaWidth, compositeCanvas.height / mediaHeight);
+          const drawWidth = mediaWidth * scale;
+          const drawHeight = mediaHeight * scale;
+          compositeContext.drawImage(element, (compositeCanvas.width - drawWidth) / 2, (compositeCanvas.height - drawHeight) / 2, drawWidth, drawHeight);
         }
         const activeCues = frameState.activeSubtitles;
         if (activeCues.length) {
