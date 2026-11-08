@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import type { Motion, PoseKeyframe, Transform3D } from "../core/model";
+import type { Motion, PoseKeyframe, SceneInteraction, Transform3D } from "../core/model";
 import { evaluatePose, evaluateProceduralMotion } from "../core/animation";
 import { getPlaybackTime } from "../core/playback";
 
@@ -23,7 +23,7 @@ function applyRootTransform(root: THREE.Group | null, animatedPosition: [number,
   root.scale.set(...transform.scale);
 }
 
-export default function Stickman({ color, motion, durationSeconds, keyframes = [], transform = { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] }, timeSeconds, travelOnJump = false }: { color: string; motion: Motion; durationSeconds: number; keyframes?: PoseKeyframe[]; transform?: Transform3D; timeSeconds?: number; travelOnJump?: boolean }) {
+export default function Stickman({ color, motion, durationSeconds, keyframes = [], transform = { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] }, timeSeconds, travelOnJump = false, interaction }: { color: string; motion: Motion; durationSeconds: number; keyframes?: PoseKeyframe[]; transform?: Transform3D; timeSeconds?: number; travelOnJump?: boolean; interaction?: SceneInteraction }) {
   const root = useRef<THREE.Group>(null);
   const leftArm = useRef<THREE.Group>(null);
   const rightArm = useRef<THREE.Group>(null);
@@ -39,6 +39,10 @@ export default function Stickman({ color, motion, durationSeconds, keyframes = [
       rightArm.current?.rotation.set(...pose.rightArmRotation);
       leftLeg.current?.rotation.set(...pose.leftLegRotation);
       rightLeg.current?.rotation.set(...pose.rightLegRotation);
+      if (interaction) {
+        leftArm.current?.rotation.set(-0.9, 0, 0.2);
+        rightArm.current?.rotation.set(-0.9, 0, -0.2);
+      }
       return;
     }
     // Clear the previous keyed pose before evaluating procedural motion.
@@ -60,6 +64,10 @@ export default function Stickman({ color, motion, durationSeconds, keyframes = [
       rightArm.current.rotation.x = pose.armSwing;
       // A direct time-based value keeps preview scrubbing and exported frames deterministic.
       rightArm.current.rotation.z = pose.waveArmRotation;
+    }
+    if (interaction) {
+      leftArm.current?.rotation.set(-0.9, 0, 0.2);
+      rightArm.current?.rotation.set(-0.9, 0, -0.2);
     }
   });
 
