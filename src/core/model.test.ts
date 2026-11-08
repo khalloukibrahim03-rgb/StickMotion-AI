@@ -48,6 +48,14 @@ describe("animation project validation", () => {
     expect(isAnimationProject(valid)).toBe(true);
   });
 
+  it("accepts bounded scene narration and rejects oversized text", () => {
+    const project = createProject();
+    project.scenes[0].narrationText = "Welcome to the science story.";
+    expect(isAnimationProject(project)).toBe(true);
+    project.scenes[0].narrationText = "x".repeat(5001);
+    expect(isAnimationProject(project)).toBe(false);
+  });
+
   it("rejects unsupported schema versions", () => {
     const project = createProject();
     expect(isAnimationProject({ ...project, schemaVersion: 99 })).toBe(false);
