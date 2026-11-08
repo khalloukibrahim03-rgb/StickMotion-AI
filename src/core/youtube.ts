@@ -18,3 +18,20 @@ export function getYouTubeExportProfile(format: YouTubeFormat): YouTubeExportPro
   };
   return profiles[format];
 }
+
+export interface CropRect { x: number; y: number; width: number; height: number }
+
+/** Center-crop a source frame to the requested aspect ratio without stretching. */
+export function getCenterCropRect(sourceWidth: number, sourceHeight: number, targetWidth: number, targetHeight: number): CropRect {
+  if (![sourceWidth, sourceHeight, targetWidth, targetHeight].every((value) => Number.isFinite(value) && value > 0)) {
+    throw new Error("Frame dimensions must be positive finite numbers");
+  }
+  const sourceAspect = sourceWidth / sourceHeight;
+  const targetAspect = targetWidth / targetHeight;
+  if (sourceAspect > targetAspect) {
+    const width = sourceHeight * targetAspect;
+    return { x: (sourceWidth - width) / 2, y: 0, width, height: sourceHeight };
+  }
+  const height = sourceWidth / targetAspect;
+  return { x: 0, y: (sourceHeight - height) / 2, width: sourceWidth, height };
+}
