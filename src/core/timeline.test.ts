@@ -57,4 +57,11 @@ describe("scene duration editing", () => {
     expect(() => resizeSceneDuration(scene, 0)).toThrow();
     expect(() => resizeSceneDuration(scene, 121)).toThrow();
   });
+
+  it("clamps a fade-in transition when the scene is shortened", () => {
+    const scene = createScene("Fade");
+    scene.fadeInSeconds = 2.5;
+    const resized = resizeSceneDuration(scene, 1);
+    expect(resized.fadeInSeconds).toBe(1);
+  });
 });
