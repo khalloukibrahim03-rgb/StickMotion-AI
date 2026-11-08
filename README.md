@@ -95,3 +95,16 @@ The application is not yet a production release. The prompt planner is rule-base
 - The editor synthesizes short footstep, whoosh, landing, rain, and wind effects locally with the Web Audio API; no external audio service or sound assets are required.
 - Cues fire when playback crosses their timestamp, including cues at the start of a scene. Backward seeking does not trigger effects.
 - The product intentionally excludes background music, instrumental tracks, and music beds. Audio export/mixing is not yet implemented.
+
+
+## YouTube export presets
+
+The editor includes browser-based export profiles for common YouTube formats:
+
+- **Standard video:** 1920 × 1080 (16:9), 30 FPS.
+- **YouTube Shorts:** 1080 × 1920 (9:16), 30 FPS.
+- **Square video:** 1080 × 1080 (1:1), 30 FPS.
+
+The renderer adjusts the camera aspect ratio, output canvas dimensions, bitrate target, and center-crops the captured viewport to avoid stretching when changing formats. Timed subtitles are composited into the exported frames. Natural sound effects remain supported; the product does not add background music.
+
+Exports are limited to 90 seconds in the current browser renderer. MP4/H.264 is selected only when the browser reports support; otherwise the file is exported as WebM. Actual codec availability and recording performance depend on the browser and device.
