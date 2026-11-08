@@ -10,7 +10,7 @@ import EnvironmentStage from "./engine/EnvironmentStage";
 import SceneProps from "./engine/SceneProps";
 import { buildStoryboard } from "./core/storyboard";
 import { buildRenderSchedule, evaluateRenderFrame, getRenderFileExtension, getRenderMimeType } from "./core/render";
-import { getCenterCropRect, getYouTubeExportProfile, type YouTubeFormat } from "./core/youtube";
+import { getCenterCropRect, getYouTubeExportProfile, type YouTubeFormat, type YouTubeFrameRate } from "./core/youtube";
 import { createPoseKeyframe, evaluateCamera } from "./core/animation";
 import type { EvaluatedPose } from "./core/animation";
 import { createProject, createScene, isAnimationProject, type AnimationProject, type AnimationScene, type Motion } from "./core/model";
@@ -54,6 +54,7 @@ export default function App() {
   const [rendering, setRendering] = useState(false);
   const [renderProgress, setRenderProgress] = useState(0);
   const [youtubeFormat, setYoutubeFormat] = useState<YouTubeFormat>("landscape");
+  const [youtubeFps, setYoutubeFps] = useState<YouTubeFrameRate>(30);
   const renderCancelRef = useRef(false);
 
   const activeScene = project.scenes.find((scene) => scene.id === activeSceneId) ?? project.scenes[0];
@@ -258,7 +259,7 @@ export default function App() {
       setMessage("Video recording is not supported by this browser");
       return;
     }
-    const exportProfile = getYouTubeExportProfile(youtubeFormat);
+    const exportProfile = getYouTubeExportProfile(youtubeFormat, youtubeFps);
     const schedule = buildRenderSchedule(project.scenes, exportProfile.fps);
     if (!schedule.length) {
       setMessage("Add at least one scene before rendering");
@@ -628,7 +629,7 @@ export default function App() {
       <main className="main-area">
         <header className="topbar">
           <div className="crumbs">Workspace <ChevronRight size={14}/> <strong>Animation studio</strong><span className={saved ? "save-state" : "save-state unsaved"}>{saved ? "Saved" : "Unsaved"}</span></div>
-          <div className="top-actions"><label className="export-preset-label">YOUTUBE <select aria-label="YouTube export format" value={youtubeFormat} disabled={rendering} onChange={(event) => setYoutubeFormat(event.target.value as YouTubeFormat)}><option value="landscape">16:9 · 1080p</option><option value="shorts">9:16 Shorts</option><option value="square">1:1 Square</option></select></label><button className="save-button render-button" disabled={rendering} onClick={() => void renderVideo()}><Download size={14}/>{rendering ? "Rendering " + renderProgress + "%" : "Render video"}</button>{rendering && <button className="save-button cancel-render-button" onClick={cancelRender}>Cancel</button>}<input ref={importInput} className="file-input-hidden" type="file" accept=".json,application/json" aria-label="Import StickMotion project" onChange={(event) => void importProject(event.target.files?.[0])}/><button className="save-button transfer-button" onClick={() => importInput.current?.click()}><Upload size={14}/> Import JSON</button><button className="save-button transfer-button" onClick={exportProject}><Download size={14}/> Export JSON</button><button className="save-button" onClick={() => void save()}><Save size={15}/> Save project</button></div>
+          <div className="top-actions"><label className="export-preset-label">YOUTUBE <select aria-label="YouTube export format" value={youtubeFormat} disabled={rendering} onChange={(event) => setYoutubeFormat(event.target.value as YouTubeFormat)}><option value="landscape">16:9 · 1080p</option><option value="shorts">9:16 Shorts</option><option value="square">1:1 Square</option></select></label><label className="export-preset-label">FPS <select aria-label="Export frame rate" value={youtubeFps} disabled={rendering} onChange={(event) => setYoutubeFps(Number(event.target.value) as YouTubeFrameRate)}><option value={24}>24</option><option value={30}>30</option><option value={60}>60</option></select></label><button className="save-button render-button" disabled={rendering} onClick={() => void renderVideo()}><Download size={14}/>{rendering ? "Rendering " + renderProgress + "%" : "Render video"}</button>{rendering && <button className="save-button cancel-render-button" onClick={cancelRender}>Cancel</button>}<input ref={importInput} className="file-input-hidden" type="file" accept=".json,application/json" aria-label="Import StickMotion project" onChange={(event) => void importProject(event.target.files?.[0])}/><button className="save-button transfer-button" onClick={() => importInput.current?.click()}><Upload size={14}/> Import JSON</button><button className="save-button transfer-button" onClick={exportProject}><Download size={14}/> Export JSON</button><button className="save-button" onClick={() => void save()}><Save size={15}/> Save project</button></div>
         </header>
 
         <section className="workspace">
