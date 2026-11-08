@@ -26,7 +26,7 @@ export function splitStoryIntoBeats(story: string, limit = 12): StoryBeat[] {
 
 function inferInteraction(text: string): SceneInteraction | undefined {
   const value = text.toLocaleLowerCase();
-  if (/\b(put|puts|putting|place|places|placing|set|sets|setting|drop|drops|dropping)\s+(?:it|the\s+\w+)\s+down\b|\b(put|puts|place|places|set|sets)\s+down\b|يضع|تضع|يترك|تترك|يسقطه|تسقطه/.test(value)) return "place";
+  if (/\b(put|puts|putting|place|places|placing|set|sets|setting|drop|drops|dropping)\s+(?:it|the\s+\w+)\s+(?:down|on|onto|in|inside|beside|near)\b|\b(put|puts|place|places|set|sets)\s+down\b|يضع|تضع|يترك|تترك|يسقطه|تسقطه/.test(value)) return "place";
   if (/\b(pick|picks|picked|picking)\s+(?:it|the\s+\w+)\s+up\b|\b(grab|grabs|grabbed|grabbing|lift|lifts|lifted|lifting)\b|يلتقط|تلتقط|يحمل|تحمل|يرفع|ترفع/.test(value)) return "pickup";
   return undefined;
 }
@@ -55,7 +55,7 @@ function inferSceneProps(text: string, motion: Motion, interaction?: SceneIntera
   if (/\b(table|desk)\b|طاولة|مكتب/.test(value)) matches.push({ kind: "table", color: "#9a6944", scale: [1, 1, 1] });
   if (/\b(pillar|column|cylinder)\b|عمود|أسطوانة/.test(value)) matches.push({ kind: "cylinder", color: "#7b91a8", scale: [0.72, 1.5, 0.72] });
   if (/\bdoor\b|باب/.test(value)) matches.push({ kind: "box", color: "#76533f", scale: [0.9, 2.5, 0.16] });
-  const refersToPreviousObject = /\\b(it|that|same)\\b|(?:يلتقطه|تلتقطه|يحمله|تحمله|يرفعه|ترفعه|يضعه|تضعه|يتركه|تتركه|يلتقطها|تلتقطها|يضعها|تضعها)/.test(value);
+  const refersToPreviousObject = /\b(it|that|same)\b|(?:يلتقطه|تلتقطه|يحمله|تحمله|يرفعه|ترفعه|يضعه|تضعه|يتركه|تتركه|يلتقطها|تلتقطها|يضعها|تضعها)/.test(value);
   if (interaction && rememberedProp && refersToPreviousObject) {
     matches.splice(0, matches.length, rememberedProp);
   } else if (!matches.length && interaction && rememberedProp) matches.push(rememberedProp);
