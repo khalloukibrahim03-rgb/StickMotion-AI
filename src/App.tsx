@@ -16,6 +16,7 @@ import type { EvaluatedPose } from "./core/animation";
 import { createProject, createScene, isAnimationProject, type AnimationProject, type AnimationScene, type Motion } from "./core/model";
 import { duplicateScene, getTimelineCuePercent, moveScene, resizeSceneDuration } from "./core/timeline";
 import { getSubtitleRenderStyle, type SubtitlePosition, type SubtitlePreset } from "./core/subtitle-style";
+import { searchCommonsMedia, type CommonsSearchResult, type VisualMediaKind } from "./core/media-search";
 import { listProjects, saveProject as persistProject } from "./core/storage";
 import { getPlaybackTime, setPlaybackTime } from "./core/playback";
 import { beginAudioCapture, endAudioCapture, getCrossedSoundEvents, playNaturalSound, soundEffectLabels, unlockAudio } from "./core/sound";
@@ -58,6 +59,10 @@ export default function App() {
   const [youtubeFps, setYoutubeFps] = useState<YouTubeFrameRate>(30);
   const [subtitlePreset, setSubtitlePreset] = useState<SubtitlePreset>("classic");
   const [subtitlePosition, setSubtitlePosition] = useState<SubtitlePosition>("bottom");
+  const [mediaSearchQuery, setMediaSearchQuery] = useState("");
+  const [mediaSearchKind, setMediaSearchKind] = useState<VisualMediaKind>("image");
+  const [mediaSearchResults, setMediaSearchResults] = useState<CommonsSearchResult[]>([]);
+  const [mediaSearchLoading, setMediaSearchLoading] = useState(false);
   const [pendingSceneSeek, setPendingSceneSeek] = useState<{ sceneId: string; atSeconds: number } | null>(null);
   const renderCancelRef = useRef(false);
 
@@ -261,6 +266,38 @@ export default function App() {
     const duration = Number(value);
     if (!Number.isFinite(duration) || duration < 0.5 || duration > 120) return;
     updateScene(resizeSceneDuration(activeScene, duration));
+  }
+
+  async function searchVisualMedia() {
+    if (mediaSearchLoading) return;
+    setMediaSearchLoading(true);
+    try {
+      const results = await searchCommonsMedia(mediaSearchQuery, mediaSearchKind);
+      setMediaSearchResults(results);
+      setMessage(results.length ? "Found " + results.length + " Commons " + mediaSearchKind + " assets" : "No matching media found. Try a broader topic.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Media search failed");
+      setMediaSearchResults([]);
+    } finally {
+      setMediaSearchLoading(false);
+    }
+  }
+
+  function addVisualAsset(result: CommonsSearchResult) {
+    if (!activeScene) return;
+    const visualAsset = {
+      ...result,
+      id: "visual_" + Math.random().toString(36).slice(2, 10),
+      startSeconds: 0,
+      endSeconds: Math.min(3, activeScene.durationSeconds),
+    };
+    updateScene({ visualAssets: [...(activeScene.visualAssets ?? []), visualAsset] });
+    setMessage("Added visual reference to " + activeScene.name + " · " + result.license);
+  }
+
+  function removeVisualAsset(id: string) {
+    if (!activeScene) return;
+    updateScene({ visualAssets: (activeScene.visualAssets ?? []).filter((asset) => asset.id !== id) });
   }
 
   function generateStory() {
@@ -757,7 +794,8 @@ export default function App() {
                 <button className="cue-time" onClick={() => { setPlaying(false); setPlayhead(cue.startSeconds); setPlaybackTime(cue.startSeconds); }}>Preview from start</button>
               </div>)}{!(activeScene?.subtitles?.length) && <small className="empty-projects">No subtitles in this scene yet.</small>}</div>
               <div className="subtitle-export-actions"><input ref={subtitleImportInput} className="file-input-hidden" type="file" accept=".srt,.vtt,text/vtt,application/x-subrip" aria-label="Import SRT or WebVTT subtitles" onChange={(event) => void importSubtitleFile(event.target.files?.[0])}/><button className="sound-add" onClick={() => subtitleImportInput.current?.click()}><Upload size={12}/> Import SRT/VTT</button><button className="sound-add" onClick={() => exportSubtitleFile("srt")}><Download size={12}/> Export SRT</button><button className="sound-add" onClick={() => exportSubtitleFile("vtt")}><Download size={12}/> Export VTT</button></div></section>
-            <section className="inspector-section story-section"><div className="section-heading"><h3>Prompt to video</h3><span className="beta-tag">STORYBOARD BETA</span></div><p>Describe the action, mood, camera shot, and setting. Build an editable scene plan with suggested motion, camera moves, and natural sound cues. The renderer selects native MP4/H.264 when this browser supports it; otherwise it exports WebM.</p><textarea className="story-input" rows={6} value={story} onChange={(event) => setStory(event.target.value)} placeholder="Example: A curious stickman walks through a rainy neon street, notices a glowing object, jumps back in surprise, then waves to the camera. Wide opening shot, then a close-up..."/><button className="generate-button" onClick={generateStory}><Sparkles size={15}/> Build video storyboard</button></section>
+                         <section className="inspector-section media-search-section"><div className="section-heading"><h3>Supporting visuals</h3><span className="beta-tag">FREE MEDIA</span></div><p>Find openly licensed reference images and video clips from Wikimedia Commons. Check each source and license before publishing.</p><div className="media-search-row"><input className="text-input" aria-label="Search supporting media" value={mediaSearchQuery} onChange={(event) => setMediaSearchQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void searchVisualMedia(); }} placeholder="e.g. volcano eruption, solar system..."/><select className="text-input" aria-label="Media type" value={mediaSearchKind} onChange={(event) => { setMediaSearchKind(event.target.value as VisualMediaKind); setMediaSearchResults([]); }}><option value="image">Images</option><option value="video">Videos</option></select><button className="generate-button" disabled={mediaSearchLoading || mediaSearchQuery.trim().length < 2} onClick={() => void searchVisualMedia()}>{mediaSearchLoading ? "Searching…" : "Search"}</button></div><div className="media-search-results">{mediaSearchResults.map((result) => <div className="media-result" key={result.id}><img src={result.thumbnailUrl} alt={result.title} loading="lazy"/><div className="media-result-info"><strong>{result.title}</strong><small>{result.kind.toUpperCase()} · {result.license}</small><small>{result.attribution}</small><a href={result.sourceUrl} target="_blank" rel="noreferrer">View source and terms</a><button className="sound-add" onClick={() => addVisualAsset(result)}>Add to scene</button></div></div>)}{mediaSearchResults.length === 0 && <small className="empty-projects">Search to find free community media.</small>}</div><div className="attached-visuals"><strong>Scene media · {activeScene?.visualAssets?.length ?? 0}</strong>{(activeScene?.visualAssets ?? []).map((asset) => <div className="attached-visual" key={asset.id}><span>{asset.kind === "video" ? "VIDEO" : "IMAGE"} · {asset.title}<small>{asset.startSeconds.toFixed(1)}–{asset.endSeconds.toFixed(1)}s · {asset.license}</small></span><button className="icon-action" aria-label={"Remove " + asset.title} onClick={() => removeVisualAsset(asset.id)}><Trash2 size={13}/></button></div>)}</div></section>
+<section className="inspector-section story-section"><div className="section-heading"><h3>Prompt to video</h3><span className="beta-tag">STORYBOARD BETA</span></div><p>Describe the action, mood, camera shot, and setting. Build an editable scene plan with suggested motion, camera moves, and natural sound cues. The renderer selects native MP4/H.264 when this browser supports it; otherwise it exports WebM.</p><textarea className="story-input" rows={6} value={story} onChange={(event) => setStory(event.target.value)} placeholder="Example: A curious stickman walks through a rainy neon street, notices a glowing object, jumps back in surprise, then waves to the camera. Wide opening shot, then a close-up..."/><button className="generate-button" onClick={generateStory}><Sparkles size={15}/> Build video storyboard</button></section>
             <div className="inspector-status"><i/> {message}</div>
           </aside>
         </section>
