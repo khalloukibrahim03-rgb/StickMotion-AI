@@ -72,7 +72,6 @@ describe("prompt object interaction planning", () => {
     expect(scenes.map((scene) => scene.interaction)).toEqual([undefined, "pickup", "place"]);
     expect(scenes[1].props?.[0].kind).toBe("box");
     expect(scenes[2].props?.[0].kind).toBe("box");
-    expect(scenes[2].props?.some((prop) => prop.kind === "table")).toBe(true);
     expect(scenes[1].props?.[0].position[0]).toBeCloseTo(1.1);
     expect(scenes[1].sounds.some((cue) => cue.effect === "grab")).toBe(true);
     expect(scenes[2].sounds.some((cue) => cue.effect === "setdown")).toBe(true);
@@ -84,6 +83,7 @@ describe("prompt object interaction planning", () => {
     expect(scenes.map((scene) => scene.interaction)).toEqual([undefined, "pickup", "place"]);
     expect(scenes[1].props?.[0].kind).toBe("box");
     expect(scenes[2].props?.[0].kind).toBe("box");
+    expect(scenes[2].props?.some((prop) => prop.kind === "table")).toBe(true);
   });
 
   it("recognizes Arabic pickup and placement actions", () => {
