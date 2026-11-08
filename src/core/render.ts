@@ -60,3 +60,10 @@ export function evaluateRenderFrame(scene: AnimationScene, frame: RenderFrame, p
     soundEvents: getCrossedSoundEvents(scene.sounds ?? [], previousSceneTime, sceneTime),
   };
 }
+
+
+/** Opacity of a black overlay used to fade a scene in from black. */
+export function getFadeInOpacity(sceneTime: number, fadeInSeconds = 0): number {
+  if (!Number.isFinite(sceneTime) || !Number.isFinite(fadeInSeconds) || fadeInSeconds <= 0) return 0;
+  return Math.max(0, Math.min(1, 1 - Math.max(0, sceneTime) / fadeInSeconds));
+}
