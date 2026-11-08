@@ -79,6 +79,7 @@ export interface AnimationScene {
   cameraKeyframes?: CameraKeyframe[];
   sounds: SceneSound[];
   subtitles?: SubtitleCue[];
+  visualAssets?: VisualAsset[];
   keyframes?: PoseKeyframe[];
 }
 
@@ -221,6 +222,7 @@ function isAnimationScene(value: unknown): value is AnimationScene {
     && isVector3(transform.scale)
     && (value.props === undefined || (Array.isArray(value.props) && value.props.length <= 30 && value.props.every(isSceneProp)))
     && (value.subtitles === undefined || (Array.isArray(value.subtitles) && value.subtitles.every((cue) => isRecord(cue) && typeof cue.id === "string" && typeof cue.text === "string" && cue.text.length > 0 && cue.text.length <= 500 && typeof cue.startSeconds === "number" && Number.isFinite(cue.startSeconds) && cue.startSeconds >= 0 && typeof cue.endSeconds === "number" && Number.isFinite(cue.endSeconds) && cue.endSeconds > cue.startSeconds && cue.endSeconds <= duration)))
+    && (value.visualAssets === undefined || (Array.isArray(value.visualAssets) && value.visualAssets.length <= 30 && value.visualAssets.every((asset) => isRecord(asset) && typeof asset.id === "string" && (asset.kind === "image" || asset.kind === "video") && typeof asset.title === "string" && typeof asset.mediaUrl === "string" && asset.mediaUrl.startsWith("https://") && typeof asset.thumbnailUrl === "string" && asset.thumbnailUrl.startsWith("https://") && typeof asset.sourceUrl === "string" && asset.sourceUrl.startsWith("https://") && typeof asset.license === "string" && typeof asset.attribution === "string" && typeof asset.startSeconds === "number" && Number.isFinite(asset.startSeconds) && asset.startSeconds >= 0 && typeof asset.endSeconds === "number" && Number.isFinite(asset.endSeconds) && asset.endSeconds > asset.startSeconds && asset.endSeconds <= duration)))
     && Array.isArray(value.sounds)
     && value.sounds.every((sound) => isSceneSound(sound, duration))
     && (value.keyframes === undefined || (Array.isArray(value.keyframes) && value.keyframes.every((frame) => isPoseKeyframe(frame, duration))));
