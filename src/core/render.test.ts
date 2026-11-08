@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildRenderSchedule, evaluateRenderFrame } from "./render";
+import { buildRenderSchedule, evaluateRenderFrame, getRenderFileExtension } from "./render";
 import { createScene } from "./model";
 
 describe("video render schedule", () => {
@@ -49,5 +49,13 @@ describe("deterministic render frame evaluation", () => {
     const other = createScene("B");
     const frame = buildRenderSchedule([other])[0];
     expect(() => evaluateRenderFrame(scene, frame, 0)).toThrow("does not belong");
+  });
+});
+
+
+describe("native recording format selection", () => {
+  it("uses an MP4 extension only for an MP4 recorder MIME type", () => {
+    expect(getRenderFileExtension("video/mp4;codecs=avc1.42E01E")).toBe("mp4");
+    expect(getRenderFileExtension("video/webm;codecs=vp9")).toBe("webm");
   });
 });
