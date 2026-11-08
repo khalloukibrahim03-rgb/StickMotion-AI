@@ -2,6 +2,7 @@
 export const PROJECT_SCHEMA_VERSION = 1 as const;
 
 export type Motion = "idle" | "walk" | "run" | "jump" | "wave";
+export type SceneInteraction = "pickup" | "place";
 export type EnvironmentPreset = "studio" | "night" | "nature";
 
 export interface Transform3D {
@@ -71,6 +72,7 @@ export interface AnimationScene {
   environment: EnvironmentPreset;
   characterTransform: Transform3D;
   props?: SceneProp[];
+  interaction?: SceneInteraction;
   camera?: CameraSettings;
   cameraKeyframes?: CameraKeyframe[];
   sounds: SceneSound[];
@@ -202,6 +204,7 @@ function isAnimationScene(value: unknown): value is AnimationScene {
     && typeof value.description === "string"
     && motions.includes(value.motion as Motion)
     && environments.includes(value.environment as EnvironmentPreset)
+    && (value.interaction === undefined || value.interaction === "pickup" || value.interaction === "place")
     && (value.cameraKeyframes === undefined || (Array.isArray(value.cameraKeyframes) && value.cameraKeyframes.every((frame) => isRecord(frame) && typeof frame.id === "string" && typeof frame.atSeconds === "number" && Number.isFinite(frame.atSeconds) && frame.atSeconds >= 0 && frame.atSeconds <= duration && (frame.easing === undefined || easingCurves.includes(frame.easing as EasingCurve)) && isVector3(frame.position) && isVector3(frame.target) && typeof frame.fov === "number" && Number.isFinite(frame.fov) && frame.fov >= 20 && frame.fov <= 80)))
     && (value.camera === undefined || (isRecord(value.camera)
       && isVector3(value.camera.position)
