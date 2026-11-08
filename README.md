@@ -126,3 +126,11 @@ Choose one of three caption looks in the subtitle inspector: **Classic** boxed c
 ## Multi-track timeline (in progress)
 
 The editor now displays scene segments with separate **Captions**, **SFX**, **Pose**, and **Camera** lanes. Subtitle blocks are sized from their timed ranges, sound cues and keyframes are placed at their scene-local timestamps, and selecting any cue pauses playback, selects its scene, and seeks the playhead to that cue. This is the first interactive multi-lane editing layer; drag-to-trim, drag-to-move, and imported media tracks remain planned work.
+
+## Supporting visual media (development)
+
+- The prompt-to-storyboard flow now searches Wikimedia Commons for scene-matched supporting media. It alternates image and video searches where possible and keeps the scene editable if no result is available.
+- Creators can also search images or video clips manually, inspect the source page, license label, and available author/credit metadata, then attach the result to the active scene.
+- Attached assets are stored with their source URL, media URL, license/credit metadata, and scene-local in/out times. They appear as scene cutaways in preview and are composited into the rendered export.
+- This first media provider is free and requires no API key. A listed Commons license is not a blanket permission for every use: creators must open the source page and comply with the individual license and attribution requirements.
+- This is media discovery and deterministic storyboard assembly, not generative AI video synthesis. Automatic script writing, voice narration, advanced cutaway editing, and more providers remain future milestones.
