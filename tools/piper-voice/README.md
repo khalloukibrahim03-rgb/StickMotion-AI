@@ -8,12 +8,12 @@ The repository-root `Dockerfile`:
 
 1. Builds the React/Vite editor into `dist/`.
 2. Installs the pinned `piper-tts` server dependency.
-3. Downloads the English `en_US-ryan-medium` and Arabic `ar_JO-kareem-medium` ONNX models during the container image build.
+3. Downloads the English `en_US-kusal-medium` and Arabic `ar_JO-kareem-medium` ONNX models during the container image build.
 4. Starts this server, which serves the editor and the same-origin `POST /api/tts` endpoint.
 
 The default model paths are:
 
-- `/app/voices/en_US-ryan-medium.onnx`
+- `/app/voices/en_US-kusal-medium.onnx`
 - `/app/voices/ar_JO-kareem-medium.onnx`
 
 Override them with `PIPER_EN_MODEL` and `PIPER_AR_MODEL` if the image layout changes. The server listens on `0.0.0.0:$PORT` and serves static files from `WEB_DIST_DIR`.
@@ -55,4 +55,4 @@ Then run `npm run dev`. Vite proxies `/api` and `/health` to the local Python pr
 
 The Render Blueprint requests a Free web service. Free instances may sleep while idle, and their memory limit may not be sufficient for both medium-sized voices. Verify container build, model loading, peak memory, and concurrent request behavior before release. Do not upgrade to a paid plan without explicit owner approval.
 
-Piper and each downloaded voice model have separate licenses and model cards. Review both model licenses and attribution/redistribution requirements before commercial use. The selected voices are not a custom-trained proprietary voice identity.
+The English Kusal model card points to MycroftAI's Mimic2 dataset (Apache-2.0). The Arabic Kareem model card points to arabicttstrain but does not state that dataset's license; confirm its terms and speaker rights before commercial use. Review both model cards and attribution/redistribution requirements. The selected voices are not a custom-trained proprietary voice identity.
