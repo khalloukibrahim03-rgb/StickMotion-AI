@@ -12,7 +12,7 @@ The `development` branch is the active engineering branch. The active editor she
 - `src/core/topic-script.ts` — short English or Arabic topic to a four-beat educational narration draft; deterministic offline templates, not generative AI.
 - `src/core/storyboard.ts` — offline prompt-to-storyboard planner with English/Arabic action recognition, editable scene beats, cinematic camera framing/moves, and motion-matched natural sound cues. This is deterministic planning, not a hosted generative AI model.
 - `src/core/render.ts` — deterministic 30 FPS render schedule for scene sequences.
-- Browser export currently records the 3D viewport to WebM at 30 FPS (up to 90 seconds), composites timed subtitles into the frames, and mixes the project's synthesized natural sound cues when browser audio capture is available. MP4/H.264 encoding and a full offline frame renderer are still future work.
+- Browser export records the 3D viewport at 1080p in landscape, Shorts, or square formats at 24/30/60 FPS (up to 90 seconds). It composites timed subtitles and can mix stored narration plus natural sound effects when browser audio capture is available. It selects MP4/H.264 only when the browser supports it; otherwise it exports WebM. A full offline frame renderer remains future work.
 - `src/core/animation.ts` — pose keyframe creation, interpolation, and linear/ease-in/ease-out/ease-in-out curves.
 - `src/core/animation.test.ts` — unit tests for keyframe boundaries, interpolation, and easing.
 - `src/core/model.ts` — strict runtime validation for imported project files and their scenes, transforms, keyframes, and sound cues.
@@ -37,7 +37,7 @@ StickMotion AI is intended to be a complete creator/editor, not only a 3D scene 
 3. **Publish:** choose YouTube formats (16:9 landscape, 9:16 Shorts, and 1:1 square), resolution and frame rate; render a reliable MP4/H.264 file with synchronized audio and captions; provide a clear export-quality check.
 4. **Finish:** support reusable project files and a repeatable render workflow so creators can revise a video without rebuilding it.
 
-These are product requirements, not claims that every capability is already implemented. Current editing tools include scene sequencing, character/camera keyframes, scene-local natural SFX, subtitle editing/import/export, and a browser-based 720p/30 FPS recording path. Multi-track media editing, transitions/title graphics, selectable YouTube export presets, dependable MP4/H.264 output, and complete audio muxing remain unfinished.
+These are product requirements, not claims that every capability is already implemented. Current editing tools include scene sequencing, separate Captions/SFX/Pose/Camera timeline lanes, character/camera keyframes, fade-in transitions, natural SFX, subtitle editing/import/export, and 1080p YouTube export presets at 24/30/60 FPS. Remaining work includes drag-to-trim and drag-to-move media tracks, title/graphic overlays, longer and more reliable rendering, and consistent MP4/H.264 output across browsers. Audio mixing is included when browser audio capture is available, but device/browser compatibility still needs end-to-end QA.
 
 ## Product principles
 
@@ -72,7 +72,7 @@ npm run build
 
 ## Validation status
 
-GitHub Actions is configured to install dependencies, run TypeScript checks, and create a production build on pushes and pull requests. GitHub Actions run 311 passed unit tests, TypeScript, Python syntax validation, and the Vite production build for commit `88aeb3a`. The Docker image itself has not yet been built in CI, and the cloud voice service has not yet been deployed or tested end-to-end. Treat the app as a deployment candidate, not a released production service, until those checks pass. Local dependency installation and GitHub cloning were blocked by network/DNS restrictions in the current execution environment.
+GitHub Actions run 314 passed unit tests, TypeScript checks, Python syntax validation, the Vite production build, and a full production Docker image build. Its container smoke test started the hosted voice server, checked `/health`, generated English and Arabic narration, and verified both WAV files were readable and non-empty. This verifies the container and synthesis path in GitHub's runner; it does not yet prove Render Free memory/performance, a live public deployment, or browser-to-export playback on real devices. Treat the app as a deployment candidate, not a production release, until those checks pass.
 
 ## Current limitations
 
