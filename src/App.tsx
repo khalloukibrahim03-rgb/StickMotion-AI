@@ -284,10 +284,10 @@ export default function App() {
       setMessage("Add narration text or subtitles to this scene before generating speech");
       return;
     }
-    const language = /[\\u0600-\\u06FF]/u.test(text) ? "ar" : "en";
+    const language = /[\u0600-\u06FF]/u.test(text) ? "ar" : "en";
     setVoiceGenerating(true);
     try {
-      const endpoint = piperServerUrl.trim().replace(/\\/+$/, "");
+      const endpoint = piperServerUrl.trim().replace(/\/+$/, "");
       const response = await fetch(endpoint + "/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -350,7 +350,7 @@ export default function App() {
     }
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    const language = /[\\u0600-\\u06FF]/u.test(text) ? "ar" : "en";
+    const language = /[\u0600-\u06FF]/u.test(text) ? "ar" : "en";
     utterance.lang = language;
     utterance.rate = narrationRate;
     utterance.pitch = narrationPitch;
