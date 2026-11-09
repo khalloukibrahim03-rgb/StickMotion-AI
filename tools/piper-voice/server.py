@@ -6,6 +6,7 @@ they never download Python, Piper, or model files.
 """
 from __future__ import annotations
 
+import gc
 import io
 import json
 import logging
@@ -27,7 +28,8 @@ MAX_BODY_BYTES = 20_000
 RATE_LIMIT_REQUESTS = 10
 RATE_LIMIT_WINDOW_SECONDS = 60
 VOICE_PATHS: dict[str, Path] = {}
-VOICES: dict[str, PiperVoice] = {}
+VOICE: PiperVoice | None = None
+LOADED_LANGUAGE: str | None = None
 VOICE_LOCK = Lock()
 RATE_LOCK = Lock()
 REQUESTS: dict[str, deque[float]] = defaultdict(deque)
@@ -40,15 +42,21 @@ STYLE_CONFIG = {
 
 
 def load_voice(language: str) -> PiperVoice:
-    if language in VOICES:
-        return VOICES[language]
+    global VOICE, LOADED_LANGUAGE
     path = VOICE_PATHS.get(language)
     if path is None or not path.is_file():
         raise FileNotFoundError(f"The {language} voice model is not configured on this server.")
     with VOICE_LOCK:
-        if language not in VOICES:
-            VOICES[language] = PiperVoice.load(str(path))
-    return VOICES[language]
+        if VOICE is not None and LOADED_LANGUAGE == language:
+            return VOICE
+        # Keep only one ONNX model resident so a small free instance has a
+        # better chance of staying within its memory limit.
+        VOICE = None
+        LOADED_LANGUAGE = None
+        gc.collect()
+        VOICE = PiperVoice.load(str(path))
+        LOADED_LANGUAGE = language
+        return VOICE
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -116,8 +124,8 @@ class Handler(SimpleHTTPRequestHandler):
                 "service": "StickMotion Cloud Voice",
                 "status": "ready",
                 "languages": {
-                    "en": {"configured": "en" in VOICE_PATHS, "loaded": "en" in VOICES},
-                    "ar": {"configured": "ar" in VOICE_PATHS, "loaded": "ar" in VOICES},
+                    "en": {"configured": "en" in VOICE_PATHS, "loaded": LOADED_LANGUAGE == "en"},
+                    "ar": {"configured": "ar" in VOICE_PATHS, "loaded": LOADED_LANGUAGE == "ar"},
                 },
             })
             return
