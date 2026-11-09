@@ -13,7 +13,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PORT=10000 \
     WEB_DIST_DIR=/app/dist \
-    PIPER_EN_MODEL=/app/voices/en_US-ryan-medium.onnx \
+    PIPER_EN_MODEL=/app/voices/en_US-kusal-medium.onnx \
     PIPER_AR_MODEL=/app/voices/ar_JO-kareem-medium.onnx
 RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
     && rm -rf /var/lib/apt/lists/*
@@ -24,7 +24,7 @@ COPY --from=frontend /app/dist ./dist
 RUN mkdir -p /app/voices
 WORKDIR /app/voices
 # Download voice weights during the server image build, never on a visitor's device.
-RUN python -m piper.download_voices --data-dir /app/voices en_US-ryan-medium ar_JO-kareem-medium
+RUN python -m piper.download_voices --data-dir /app/voices en_US-kusal-medium ar_JO-kareem-medium
 RUN useradd --create-home --uid 10001 app \
     && chown -R app:app /app
 USER app
