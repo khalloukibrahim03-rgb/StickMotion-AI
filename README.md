@@ -143,7 +143,7 @@ The editor now displays scene segments with separate **Captions**, **SFX**, **Po
 
 - The app sends scene narration to the same-origin `/api/tts` endpoint. The production Docker image serves the web editor and voice API together, so no API key or local address is exposed in the browser.
 - Piper TTS is an open-source server-side engine. English (`en_US-ryan-medium`) and Jordanian Arabic (`ar_JO-kareem-medium`) model files are fetched during the server image build and stay on the server; visitors do not download Python, Piper, or model weights.
-- The voice endpoint supports Arabic and English, documentary/energetic/calm synthesis profiles, speaking-rate control, bounded request size, a per-client request limit, and one synthesis at a time to protect a small free instance.
+- The voice endpoint supports Arabic and English, documentary/energetic/calm synthesis profiles, speaking-rate control, bounded request size, a per-client request limit, and one synthesis at a time. It keeps only the currently requested language model in memory to reduce pressure on a small free instance.
 - Generated WAV files are stored per scene in browser IndexedDB, previewable, and included in the audio stream during video export when the browser grants audio capture.
 - The browser SpeechSynthesis feature is only a device-dependent preview. It is not the StickMotion Cloud Voice and is not used as the final exported narration.
 - Voice identity is currently based on the selected licensed Piper voice model plus synthesis settings. It is not a newly trained proprietary speaker identity; that requires consented voice recordings and a separate model-training milestone.
