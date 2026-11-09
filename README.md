@@ -72,11 +72,11 @@ npm run build
 
 ## Validation status
 
-GitHub Actions is configured to install dependencies, run TypeScript checks, and create a production build on pushes and pull requests. The last confirmed sound-cue timing workflow passed tests, type checking, and production build. The latest project import/export and validation changes are being checked by GitHub Actions. Local dependency installation and GitHub cloning were blocked by network/DNS restrictions in the current execution environment.
+GitHub Actions is configured to install dependencies, run TypeScript checks, and create a production build on pushes and pull requests. The latest confirmed CI run on the previous commit passed unit tests, TypeScript, Python syntax validation, and production build. The cloud voice and deployment changes are now committed and their new workflow run must pass before release. Local dependency installation and GitHub cloning were blocked by network/DNS restrictions in the current execution environment.
 
 ## Current limitations
 
-The application is not yet a production release. The prompt planner is rule-based rather than generative AI: it recognizes common English and Arabic action phrases, builds editable scene beats, suggests camera moves, and adds natural sound cues. The character supports procedural motions and editable full-body pose keyframes for both arms, both legs, and the root transform, with linear and eased interpolation. Scene-local natural sound cues can be previewed, edited, and triggered during forward timeline playback. Projects can be saved locally and transferred as validated JSON files. Camera keyframes now animate the live preview while playing; pause playback to orbit the camera manually and capture a new keyframe. Advanced audio-track editing, automatic AI voice generation, and complete MP4 export are still under development. These limitations will be removed milestone by milestone and verified before release.
+The application is not yet a production release. The prompt planner is rule-based rather than generative AI: it recognizes common English and Arabic action phrases, builds editable scene beats, suggests camera moves, and adds natural sound cues. The character supports procedural motions and editable full-body pose keyframes for both arms, both legs, and the root transform, with linear and eased interpolation. Scene-local natural sound cues can be previewed, edited, and triggered during forward timeline playback. Projects can be saved locally and transferred as validated JSON files. Camera keyframes now animate the live preview while playing; pause playback to orbit the camera manually and capture a new keyframe. Advanced multi-track editing and dependable MP4/H.264 export remain unfinished. Cloud voice generation is implemented in the app and backend, but it is not live until the Docker service has been deployed and its memory, Arabic/English output, and export path have passed end-to-end tests. These limitations will be removed milestone by milestone and verified before release.
 
 ## Roadmap
 
@@ -139,22 +139,26 @@ The editor now displays scene segments with separate **Captions**, **SFX**, **Po
 - This is media discovery and deterministic storyboard assembly, not generative AI video synthesis. Automatic script writing, voice narration, advanced cutaway editing, and more providers remain future milestones.
 
 
-## Recorded pro voice-over
+## StickMotion Cloud Voice
 
-- Import a studio-recorded Arabic or English voice-over for each scene (MP3/WAV/M4A/OGG; browser decoder support varies; maximum 40 MB per scene).
-- Recordings are stored separately from the JSON project in the browser IndexedDB database and remain local to that browser/device.
-- Preview each imported recording before export. During video rendering, the recording starts at the beginning of its scene and is mixed into the captured audio stream alongside natural sound effects.
-- The built-in SpeechSynthesis voice remains a basic system-voice test; it is not studio-quality and is not part of the final export.
-- Optional local AI narration is now connected through Piper TTS: configure Arabic and/or English ONNX voice models, run the loopback-only Python bridge in `tools/piper-voice/server.py`, and generate a real WAV recording per scene. Generated audio is stored in IndexedDB and mixed into video export.
-- The local Piper setup is optional and requires a one-time Python package/model download. No cloud account or paid API is required. Setup instructions: [tools/piper-voice/README.md](tools/piper-voice/README.md).
-- The browser SpeechSynthesis test remains separate from Piper-generated WAV output. Browser voice profiles do not pretend to create studio recordings.
+- The app sends scene narration to the same-origin `/api/tts` endpoint. The production Docker image serves the web editor and voice API together, so no API key or local address is exposed in the browser.
+- Piper TTS is an open-source server-side engine. English (`en_US-ryan-medium`) and Jordanian Arabic (`ar_JO-kareem-medium`) model files are fetched during the server image build and stay on the server; visitors do not download Python, Piper, or model weights.
+- The voice endpoint supports Arabic and English, documentary/energetic/calm synthesis profiles, speaking-rate control, bounded request size, a per-client request limit, and one synthesis at a time to protect a small free instance.
+- Generated WAV files are stored per scene in browser IndexedDB, previewable, and included in the audio stream during video export when the browser grants audio capture.
+- The browser SpeechSynthesis feature is only a device-dependent preview. It is not the StickMotion Cloud Voice and is not used as the final exported narration.
+- Voice identity is currently based on the selected licensed Piper voice model plus synthesis settings. It is not a newly trained proprietary speaker identity; that requires consented voice recordings and a separate model-training milestone.
+- Review each voice model's own license and model card before commercial publishing. The Piper engine license does not automatically grant rights to every voice model.
 - No background music, instrumental tracks, or music beds are added.
 
+## Cloud deployment
 
-## StickMotion Pro Voice profiles (development)
+The repository includes a multi-stage `Dockerfile` and a Render Blueprint (`render.yaml`). The container builds the web editor, installs Piper, downloads the voice models server-side, and serves the app plus `/api/tts` from one origin.
 
-- The narration inspector now includes reusable channel-style presets: **Documentary** (warm and steady), **Energetic**, and **Calm**.
-- Each preset sets a starting speaking rate and pitch for the optional browser SpeechSynthesis test; both values can be adjusted manually.
-- Arabic and English text are detected for the browser test, and a compatible installed system voice is selected when available.
-- Important boundary: these profiles are voice-direction controls, not an AI voice model. Browser SpeechSynthesis is device-dependent, may sound different across systems, and is not exported as the final narration track.
-- Actual generated narration still requires a real TTS engine. The existing per-scene audio import remains the reliable route for voice-over included in video export. No paid API or background music is introduced.
+For a no-cost prototype, create a Render Blueprint deployment from this repository and select the `development` branch. The blueprint requests Render's Free web-service plan; it does not create a paid instance. Important limitations: Render Free services can sleep when idle and take time to wake, and the 512 MB memory limit may be too small for both medium Piper models. The build and runtime memory must be measured before treating cloud voice as production-ready. If the free instance cannot load the models reliably, do not silently upgrade or incur charges; keep cloud voice marked unavailable until a genuinely free host with sufficient memory is available.
+
+For local developer testing only, run the Python service with Piper models already present and start Vite. Vite proxies `/api` and `/health` to `127.0.0.1:8765`. This is a developer workflow, not an end-user setup requirement.
+
+## Voice style controls
+
+The editor provides Documentary, Energetic, and Calm presets. These set the starting rate and the synthesis style parameters sent to the hosted Piper service. The browser pitch slider applies only to the optional system-voice preview; Piper does not currently provide a pitch-shift control in this integration.
+
