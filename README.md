@@ -19,6 +19,7 @@ The `development` branch is the active engineering branch. The active editor she
 - `src/core/model.test.ts` — project import validation tests.
 - `src/core/sound.ts` — local Web Audio synthesis and scene-local sound cue scheduling.
 - Scene narration — editable per-scene narration text with browser SpeechSynthesis voice preview, automatic Arabic/English language detection, voice selection, and speaking-rate control. This preview is not yet captured or muxed into exported video.
+- `src/core/narration.ts` — creates editable, word-count-timed subtitle cues from scene narration in English or Arabic; timings are estimates and can be refined in the subtitle editor.
 - `src/core/subtitles.ts` — SRT/WebVTT parsing and project-wide serialization with scene-duration offsets; captions crossing scene boundaries are split into scene-local cues.
 - `src/core/subtitles.test.ts` — subtitle import/export tests covering timestamps, Arabic text, scene offsets, sorting, splitting, and empty projects.
 - `src/core/sound.test.ts` — sound cue crossing, time-zero, chronological ordering, and backward-seek tests.
