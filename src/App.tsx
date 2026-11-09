@@ -128,6 +128,10 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+  }, [activeSceneId]);
+
+  useEffect(() => {
     // Rendering drives the playhead frame-by-frame; do not reset it when the
     // renderer switches scenes or the first frame of each scene is lost.
     if (rendering) {
@@ -254,8 +258,8 @@ export default function App() {
     utterance.rate = narrationRate;
     const chosenVoice = speechVoices.find((voice) => voice.voiceURI === selectedVoiceURI);
     const matchingVoice = speechVoices.find((voice) => voice.lang.toLowerCase().startsWith(language));
-    if (chosenVoice) utterance.voice = chosenVoice;
-    else if (matchingVoice) utterance.voice = matchingVoice;
+    const compatibleVoice = chosenVoice?.lang.toLowerCase().startsWith(language) ? chosenVoice : matchingVoice;
+    if (compatibleVoice) utterance.voice = compatibleVoice;
     utterance.onstart = () => setMessage("Narration preview playing · " + utterance.lang);
     utterance.onend = () => setMessage("Narration preview finished · audio is not yet included in video export");
     utterance.onerror = () => setMessage("Narration preview could not be played by this browser");
