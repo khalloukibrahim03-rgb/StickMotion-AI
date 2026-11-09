@@ -39,7 +39,7 @@ Request JSON:
 - Success: `audio/wav`.
 - `GET /health`: service readiness and configured/loaded language flags.
 
-The service caps text length and request size, applies a per-client request limit, and allows one synthesis at a time. Same-origin production requests need no browser API key. The browser endpoint is not a secret; do not add a private API key to a `VITE_*` variable.
+The service caps text length and request size, applies a per-client request limit, allows one synthesis at a time, and keeps only one language model resident in memory. Same-origin production requests need no browser API key. The browser endpoint is not a secret; do not add a private API key to a `VITE_*` variable.
 
 ## Developer workflow
 
