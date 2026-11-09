@@ -478,6 +478,7 @@ export default function App() {
     const chunks: BlobPart[] = [];
     let stream: MediaStream | null = null;
     let recorder: MediaRecorder | null = null;
+    let activeNarrationSource: AudioBufferSourceNode | null = null;
     const visualElements = new Map<string, HTMLImageElement | HTMLVideoElement>();
     const compositeCanvas = document.createElement("canvas");
     // Export a standard HD frame size regardless of the editor panel's dimensions.
@@ -549,6 +550,7 @@ export default function App() {
           if (stored) narrationBuffers.set(scene.id, await decodeNarrationAudio(stored.blob));
         }
       }
+      const hasCapturedNarration = audioUnlocked && narrationBuffers.size > 0;
       const hasCapturedAudio = Boolean(audioStream?.getAudioTracks().length);
       stream = new MediaStream([...videoStream.getVideoTracks(), ...(audioStream?.getAudioTracks() ?? [])]);
       recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: exportProfile.videoBitsPerSecond });
@@ -569,8 +571,12 @@ export default function App() {
         if (scene.id !== renderedSceneId) {
           flushSync(() => setActiveSceneId(scene.id));
           renderedSceneId = scene.id;
+          if (activeNarrationSource) {
+            try { activeNarrationSource.stop(); } catch { /* already finished */ }
+            activeNarrationSource = null;
+          }
           const narrationBuffer = narrationBuffers.get(scene.id);
-          if (narrationBuffer) playNarrationAudio(narrationBuffer);
+          if (narrationBuffer) activeNarrationSource = playNarrationAudio(narrationBuffer);
           previousSceneTime = -1 / exportProfile.fps;
         }
         const frameState = evaluateRenderFrame(scene, frame, previousSceneTime);
@@ -696,7 +702,7 @@ export default function App() {
         anchor.download = safeTitle + "." + fileExtension;
         anchor.click();
         window.setTimeout(() => URL.revokeObjectURL(url), 30000);
-        setMessage("Video exported as " + fileExtension.toUpperCase() + " · " + exportProfile.label + " · " + exportProfile.fps + " FPS · timed subtitles" + (hasCapturedAudio ? " · natural sound effects included" : " · browser audio capture unavailable"));
+        setMessage("Video exported as " + fileExtension.toUpperCase() + " · " + exportProfile.label + " · " + exportProfile.fps + " FPS · timed subtitles" + (hasCapturedNarration ? " · pro voice-over included" : "") + (hasCapturedAudio ? " · natural sound effects included" : " · browser audio capture unavailable"));
       } else {
         setMessage("Video render cancelled");
       }
@@ -704,6 +710,9 @@ export default function App() {
       if (recorder && recorder.state !== "inactive") recorder.stop();
       setMessage(error instanceof Error ? error.message : "Video render failed");
     } finally {
+      if (activeNarrationSource) {
+        try { activeNarrationSource.stop(); } catch { /* already finished */ }
+      }
       stream?.getTracks().forEach((track) => track.stop());
       endAudioCapture();
       if (liveRendererRef.current && previousRendererSize && previousPixelRatio !== undefined) {
