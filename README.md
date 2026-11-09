@@ -147,3 +147,12 @@ The editor now displays scene segments with separate **Captions**, **SFX**, **Po
 - The built-in SpeechSynthesis voice remains a basic system-voice test; it is not studio-quality and is not part of the final export.
 - Automatic AI voice generation is not included yet. A genuinely high-quality generated voice requires a suitable model/provider; the product will not silently depend on a paid API.
 - No background music, instrumental tracks, or music beds are added.
+
+
+## StickMotion Pro Voice profiles (development)
+
+- The narration inspector now includes reusable channel-style presets: **Documentary** (warm and steady), **Energetic**, and **Calm**.
+- Each preset sets a starting speaking rate and pitch for the optional browser SpeechSynthesis test; both values can be adjusted manually.
+- Arabic and English text are detected for the browser test, and a compatible installed system voice is selected when available.
+- Important boundary: these profiles are voice-direction controls, not an AI voice model. Browser SpeechSynthesis is device-dependent, may sound different across systems, and is not exported as the final narration track.
+- Actual generated narration still requires a real TTS engine. The existing per-scene audio import remains the reliable route for voice-over included in video export. No paid API or background music is introduced.
