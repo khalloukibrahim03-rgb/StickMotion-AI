@@ -493,6 +493,9 @@ export default function App() {
       setMessage("Could not create the video compositing surface");
       return;
     }
+    // Resume Web Audio immediately while the export button's user activation is still active.
+    // Asset preloading below can take long enough for browser autoplay permission to expire.
+    const audioUnlockPromise = unlockAudio();
     renderCancelRef.current = false;
     flushSync(() => {
       setRendering(true);
@@ -542,7 +545,7 @@ export default function App() {
         videoStream = compositeCanvas.captureStream(exportProfile.fps);
         manualVideoTrack = undefined;
       }
-      const audioUnlocked = await unlockAudio();
+      const audioUnlocked = await audioUnlockPromise;
       const audioStream = audioUnlocked ? beginAudioCapture() : null;
       const narrationBuffers = new Map<string, AudioBuffer>();
       if (audioUnlocked) {
