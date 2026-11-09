@@ -24,7 +24,7 @@ COPY --from=frontend /app/dist ./dist
 RUN mkdir -p /app/voices
 WORKDIR /app/voices
 # Download voice weights during the server image build, never on a visitor's device.
-RUN python -m piper.download_voices en_US-ryan-medium ar_JO-kareem-medium
+RUN python -m piper.download_voices --data-dir /app/voices en_US-ryan-medium ar_JO-kareem-medium
 WORKDIR /app
 EXPOSE 10000
 CMD ["python", "tools/piper-voice/server.py"]
