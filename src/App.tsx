@@ -19,9 +19,9 @@ import { createProject, createScene, isAnimationProject, type AnimationProject, 
 import { duplicateScene, getTimelineCuePercent, moveScene, resizeSceneDuration } from "./core/timeline";
 import { getSubtitleRenderStyle, type SubtitlePosition, type SubtitlePreset } from "./core/subtitle-style";
 import { searchCommonsMedia, type CommonsSearchResult, type VisualMediaKind } from "./core/media-search";
-import { listProjects, saveProject as persistProject } from "./core/storage";
+import { deleteNarrationAudio, listProjects, loadNarrationAudio, saveNarrationAudio, saveProject as persistProject } from "./core/storage";
 import { getPlaybackTime, setPlaybackTime } from "./core/playback";
-import { beginAudioCapture, endAudioCapture, getCrossedSoundEvents, playNaturalSound, soundEffectLabels, unlockAudio } from "./core/sound";
+import { beginAudioCapture, decodeNarrationAudio, endAudioCapture, getCrossedSoundEvents, playNarrationAudio, playNaturalSound, soundEffectLabels, unlockAudio } from "./core/sound";
 import { distributeSubtitlesAcrossScenes, parseSubtitleFile, serializeSubtitles, type SubtitleFormat } from "./core/subtitles";
 import type { CameraSettings, SceneSound, SubtitleCue } from "./core/model";
 
@@ -31,6 +31,7 @@ export default function App() {
   const [project, setProject] = useState<AnimationProject>(() => createProject());
   const importInput = useRef<HTMLInputElement>(null);
   const subtitleImportInput = useRef<HTMLInputElement>(null);
+  const narrationAudioInput = useRef<HTMLInputElement>(null);
   const liveCameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const liveRendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const liveSceneRef = useRef<THREE.Scene | null>(null);
@@ -40,6 +41,8 @@ export default function App() {
   const [speechVoices, setSpeechVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoiceURI, setSelectedVoiceURI] = useState("");
   const [narrationRate, setNarrationRate] = useState(1);
+  const [narrationAudioInfo, setNarrationAudioInfo] = useState<{ name: string; type: string } | null>(null);
+  const [narrationAudioUrl, setNarrationAudioUrl] = useState("");
   const [story, setStory] = useState("A curious stickman walks into a quiet room. It notices a strange object and jumps in surprise. Then it waves hello.");
   const [playing, setPlaying] = useState(true);
   const [playhead, setPlayhead] = useState(0);
@@ -114,6 +117,20 @@ export default function App() {
     frame = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(frame);
   }, [playing, activeSceneId, activeScene?.durationSeconds, project.scenes]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl = "";
+    setNarrationAudioInfo(null);
+    setNarrationAudioUrl("");
+    void loadNarrationAudio(project.id, activeSceneId).then((stored) => {
+      if (cancelled || !stored) return;
+      objectUrl = URL.createObjectURL(stored.blob);
+      setNarrationAudioInfo({ name: stored.name, type: stored.type });
+      setNarrationAudioUrl(objectUrl);
+    }).catch(() => setMessage("Could not load this scene narration recording"));
+    return () => { cancelled = true; if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [project.id, activeSceneId]);
 
   useEffect(() => {
     if (!("speechSynthesis" in window)) return;
@@ -237,6 +254,44 @@ export default function App() {
       ].sort((left, right) => left.atSeconds - right.atSeconds),
     });
     setMessage("Captured live camera view at " + frame.atSeconds.toFixed(2) + "s");
+  }
+
+  async function importNarrationAudio(file?: File) {
+    if (!file || !activeScene) return;
+    try {
+      await saveNarrationAudio(project.id, activeScene.id, file);
+      setNarrationAudioInfo({ name: file.name, type: file.type });
+      setNarrationAudioUrl(URL.createObjectURL(file));
+      setMessage("Professional voice-over attached to this scene and saved locally");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not import narration audio");
+    } finally {
+      if (narrationAudioInput.current) narrationAudioInput.current.value = "";
+    }
+  }
+
+  async function previewRecordedNarration() {
+    if (!narrationAudioUrl) return;
+    const audio = new Audio(narrationAudioUrl);
+    audio.volume = 1;
+    try {
+      await audio.play();
+      setMessage("Playing imported voice-over recording");
+    } catch {
+      setMessage("Could not play this audio file in the browser");
+    }
+  }
+
+  async function removeNarrationAudio() {
+    if (!activeScene) return;
+    try {
+      await deleteNarrationAudio(project.id, activeScene.id);
+      setNarrationAudioInfo(null);
+      setNarrationAudioUrl("");
+      setMessage("Voice-over recording removed from this scene");
+    } catch {
+      setMessage("Could not remove the voice-over recording");
+    }
   }
 
   function previewNarration() {
@@ -487,6 +542,13 @@ export default function App() {
       }
       const audioUnlocked = await unlockAudio();
       const audioStream = audioUnlocked ? beginAudioCapture() : null;
+      const narrationBuffers = new Map<string, AudioBuffer>();
+      if (audioUnlocked) {
+        for (const scene of project.scenes) {
+          const stored = await loadNarrationAudio(project.id, scene.id);
+          if (stored) narrationBuffers.set(scene.id, await decodeNarrationAudio(stored.blob));
+        }
+      }
       const hasCapturedAudio = Boolean(audioStream?.getAudioTracks().length);
       stream = new MediaStream([...videoStream.getVideoTracks(), ...(audioStream?.getAudioTracks() ?? [])]);
       recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: exportProfile.videoBitsPerSecond });
@@ -507,6 +569,8 @@ export default function App() {
         if (scene.id !== renderedSceneId) {
           flushSync(() => setActiveSceneId(scene.id));
           renderedSceneId = scene.id;
+          const narrationBuffer = narrationBuffers.get(scene.id);
+          if (narrationBuffer) playNarrationAudio(narrationBuffer);
           previousSceneTime = -1 / exportProfile.fps;
         }
         const frameState = evaluateRenderFrame(scene, frame, previousSceneTime);
@@ -931,7 +995,7 @@ export default function App() {
                 <button className="cue-time" onClick={() => { setPlaying(false); setPlayhead(cue.startSeconds); setPlaybackTime(cue.startSeconds); }}>Preview from start</button>
               </div>)}{!(activeScene?.subtitles?.length) && <small className="empty-projects">No subtitles in this scene yet.</small>}</div>
               <div className="subtitle-export-actions"><input ref={subtitleImportInput} className="file-input-hidden" type="file" accept=".srt,.vtt,text/vtt,application/x-subrip" aria-label="Import SRT or WebVTT subtitles" onChange={(event) => void importSubtitleFile(event.target.files?.[0])}/><button className="sound-add" onClick={() => subtitleImportInput.current?.click()}><Upload size={12}/> Import SRT/VTT</button><button className="sound-add" onClick={() => exportSubtitleFile("srt")}><Download size={12}/> Export SRT</button><button className="sound-add" onClick={() => exportSubtitleFile("vtt")}><Download size={12}/> Export VTT</button></div></section>
-                         <section className="inspector-section narration-section"><div className="section-heading"><h3>Voice narration</h3><span className="beta-tag">BROWSER PREVIEW</span></div><p>Write the spoken line for this scene, then preview it with a voice installed in your browser. Arabic and English are detected automatically. Browser speech is a preview only and is not yet included in exported video files.</p><textarea className="description-input" rows={4} maxLength={5000} value={activeScene?.narrationText ?? ""} onChange={(event) => updateScene({ narrationText: event.target.value })} placeholder="Write narration for this scene… / اكتب التعليق الصوتي لهذا المشهد…"/><label className="field-label">VOICE</label><select className="text-input" aria-label="Narration voice" value={selectedVoiceURI} onChange={(event) => setSelectedVoiceURI(event.target.value)}><option value="">Automatic · match narration language</option>{speechVoices.map((voice) => <option key={voice.voiceURI} value={voice.voiceURI}>{voice.name} · {voice.lang}{voice.default ? " · default" : ""}</option>)}</select><label className="field-label">SPEAKING SPEED <b>{narrationRate.toFixed(1)}×</b></label><input className="duration-range" aria-label="Narration speaking speed" type="range" min="0.7" max="1.3" step="0.1" value={narrationRate} onChange={(event) => setNarrationRate(Number(event.target.value))}/><div className="subtitle-export-actions"><button className="sound-add" disabled={!activeScene?.narrationText?.trim() && !(activeScene?.subtitles?.length)} onClick={previewNarration}><Volume2 size={12}/> Preview voice</button><button className="sound-add" onClick={stopNarration}>Stop voice</button></div>{speechVoices.length === 0 && <small className="empty-projects">No browser voices are available yet. Check your operating system's speech settings.</small>}</section>
+                         <section className="inspector-section narration-section"><div className="section-heading"><h3>Pro voice-over</h3><span className="beta-tag">AUDIO EXPORT</span></div><p>Import a professionally recorded Arabic or English voice-over (MP3, WAV, M4A, or OGG). The recording is saved locally for this scene, previewable, and mixed into the exported video. No paid API is required.</p><input ref={narrationAudioInput} className="file-input-hidden" type="file" accept="audio/*,.mp3,.wav,.m4a,.ogg" aria-label="Import professional narration audio" onChange={(event) => void importNarrationAudio(event.target.files?.[0])}/><div className="subtitle-export-actions"><button className="sound-add" onClick={() => narrationAudioInput.current?.click()}><Upload size={12}/> Import pro voice-over</button><button className="sound-add" disabled={!narrationAudioUrl} onClick={() => void previewRecordedNarration()}><Play size={12}/> Preview recording</button>{narrationAudioInfo && <button className="sound-add" onClick={() => void removeNarrationAudio()}>Remove</button>}</div>{narrationAudioInfo ? <small className="empty-projects">Attached: {narrationAudioInfo.name} · included in video export</small> : <small className="empty-projects">No recorded voice-over attached to this scene. Import a studio-quality recording to use in your final video.</small>}<label className="field-label">SCRIPT / NARRATION TEXT</label><textarea className="description-input" rows={4} maxLength={5000} value={activeScene?.narrationText ?? ""} onChange={(event) => updateScene({ narrationText: event.target.value })} placeholder="Write the spoken line for this scene… / اكتب التعليق الصوتي لهذا المشهد…"/><div className="section-heading"><h3>Quick browser voice test</h3><span className="beta-tag">BASIC</span></div><p>Optional system voice preview only; it is not the professional recording and is not exported.</p><label className="field-label">VOICE</label><select className="text-input" aria-label="Browser test voice" value={selectedVoiceURI} onChange={(event) => setSelectedVoiceURI(event.target.value)}><option value="">Automatic · match narration language</option>{speechVoices.map((voice) => <option key={voice.voiceURI} value={voice.voiceURI}>{voice.name} · {voice.lang}{voice.default ? " · default" : ""}</option>)}</select><label className="field-label">SPEAKING SPEED <b>{narrationRate.toFixed(1)}×</b></label><input className="duration-range" aria-label="Narration speaking speed" type="range" min="0.7" max="1.3" step="0.1" value={narrationRate} onChange={(event) => setNarrationRate(Number(event.target.value))}/><div className="subtitle-export-actions"><button className="sound-add" disabled={!activeScene?.narrationText?.trim() && !(activeScene?.subtitles?.length)} onClick={previewNarration}><Volume2 size={12}/> Test system voice</button><button className="sound-add" onClick={stopNarration}>Stop voice</button></div></section>
                          <section className="inspector-section media-search-section"><div className="section-heading"><h3>Supporting visuals</h3><span className="beta-tag">FREE MEDIA</span></div><p>Find openly licensed reference images and video clips from Wikimedia Commons. Check each source and license before publishing.</p><div className="media-search-row"><input className="text-input" aria-label="Search supporting media" value={mediaSearchQuery} onChange={(event) => setMediaSearchQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void searchVisualMedia(); }} placeholder="e.g. volcano eruption, solar system..."/><select className="text-input" aria-label="Media type" value={mediaSearchKind} onChange={(event) => { setMediaSearchKind(event.target.value as VisualMediaKind); setMediaSearchResults([]); }}><option value="image">Images</option><option value="video">Videos</option></select><button className="generate-button" disabled={mediaSearchLoading || mediaSearchQuery.trim().length < 2} onClick={() => void searchVisualMedia()}>{mediaSearchLoading ? "Searching…" : "Search"}</button></div><div className="media-search-results">{mediaSearchResults.map((result) => <div className="media-result" key={result.id}><img src={result.thumbnailUrl} alt={result.title} loading="lazy"/><div className="media-result-info"><strong>{result.title}</strong><small>{result.kind.toUpperCase()} · {result.license}</small><small>{result.attribution}</small><a href={result.sourceUrl} target="_blank" rel="noreferrer">View source and terms</a><button className="sound-add" onClick={() => addVisualAsset(result)}>Add to scene</button></div></div>)}{mediaSearchResults.length === 0 && <small className="empty-projects">Search to find free community media.</small>}</div><div className="attached-visuals"><strong>Scene media · {activeScene?.visualAssets?.length ?? 0}</strong>{(activeScene?.visualAssets ?? []).map((asset) => <div className="attached-visual" key={asset.id}><span>{asset.kind === "video" ? "VIDEO" : "IMAGE"} · {asset.title}<small>{asset.startSeconds.toFixed(1)}–{asset.endSeconds.toFixed(1)}s · {asset.license}</small></span><button className="icon-action" aria-label={"Remove " + asset.title} onClick={() => removeVisualAsset(asset.id)}><Trash2 size={13}/></button></div>)}</div></section>
 <section className="inspector-section story-section"><div className="section-heading"><h3>Prompt to video</h3><span className="beta-tag">STORYBOARD BETA</span></div><p>Describe the action, mood, camera shot, and setting. Build editable scenes, then search Wikimedia Commons for supporting images and video clips with source and license details. The renderer selects native MP4/H.264 when this browser supports it; otherwise it exports WebM.</p><textarea className="story-input" rows={6} value={story} onChange={(event) => setStory(event.target.value)} placeholder="Enter a topic (e.g. black holes / الثقوب السوداء) or paste a full script. Short topics become a 4-part offline educational script..."/><button className="generate-button" onClick={generateStory}><Sparkles size={15}/> Build video + find visuals</button></section>
             <div className="inspector-status"><i/> {message}</div>
