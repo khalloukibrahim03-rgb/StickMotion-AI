@@ -1,28 +1,42 @@
 #!/usr/bin/env python3
-"""Loopback-only Piper TTS bridge for StickMotion AI.
+"""Hosted Piper TTS and static web server for StickMotion AI.
 
-Install: python -m pip install piper-tts
-Run with local ONNX voice models; no cloud API or network model download is used.
+Voice models are installed in the server image. End users only use /api/tts;
+they never download Python, Piper, or model files.
 """
 from __future__ import annotations
 
-import argparse
 import io
 import json
 import logging
-import wave
 import math
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import os
+import time
+import wave
+from collections import defaultdict, deque
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from threading import Lock
+from threading import BoundedSemaphore, Lock
+from urllib.parse import urlsplit
 from typing import Any
 
 from piper import PiperVoice, SynthesisConfig
 
-MAX_TEXT_LENGTH = 5000
-VOICES: dict[str, PiperVoice] = {}
+MAX_TEXT_LENGTH = 2500
+MAX_BODY_BYTES = 16_000
+RATE_LIMIT_REQUESTS = 10
+RATE_LIMIT_WINDOW_SECONDS = 60
 VOICE_PATHS: dict[str, Path] = {}
+VOICES: dict[str, PiperVoice] = {}
 VOICE_LOCK = Lock()
+RATE_LOCK = Lock()
+REQUESTS: dict[str, deque[float]] = defaultdict(deque)
+SYNTHESIS_SLOT = BoundedSemaphore(1)
+STYLE_CONFIG = {
+    "documentary": {"noise_scale": 0.667, "noise_w_scale": 0.8},
+    "energetic": {"noise_scale": 0.8, "noise_w_scale": 0.9},
+    "calm": {"noise_scale": 0.55, "noise_w_scale": 0.7},
+}
 
 
 def load_voice(language: str) -> PiperVoice:
@@ -30,24 +44,37 @@ def load_voice(language: str) -> PiperVoice:
         return VOICES[language]
     path = VOICE_PATHS.get(language)
     if path is None or not path.is_file():
-        raise FileNotFoundError(f"No {language} voice model configured.")
+        raise FileNotFoundError(f"The {language} voice model is not configured on this server.")
     with VOICE_LOCK:
         if language not in VOICES:
             VOICES[language] = PiperVoice.load(str(path))
     return VOICES[language]
 
 
-class Handler(BaseHTTPRequestHandler):
-    server_version = "StickMotionPiper/1.0"
+class Handler(SimpleHTTPRequestHandler):
+    server_version = "StickMotionCloudVoice/1.0"
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        web_root = os.environ.get("WEB_DIST_DIR", "dist")
+        super().__init__(*args, directory=web_root, **kwargs)
+
+    def _origin_allowed(self) -> bool:
+        origin = self.headers.get("Origin", "")
+        if not origin:
+            return True
+        allowed = self.server.allowed_origins
+        if origin in allowed:
+            return True
+        # Same-origin production requests need no separately configured CORS entry.
+        return urlsplit(origin).netloc == self.headers.get("Host", "")
 
     def _cors(self) -> None:
         origin = self.headers.get("Origin", "")
-        if origin in self.server.allowed_origins:
+        if origin and self._origin_allowed():
             self.send_header("Access-Control-Allow-Origin", origin)
             self.send_header("Vary", "Origin")
             self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
             self.send_header("Access-Control-Allow-Headers", "Content-Type")
-            self.send_header("Access-Control-Allow-Private-Network", "true")
 
     def _json(self, status: int, payload: dict[str, Any]) -> None:
         data = json.dumps(payload).encode("utf-8")
@@ -58,16 +85,25 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
-    def _valid_host(self) -> bool:
-        return self.headers.get("Host", "") in {"127.0.0.1:8765", "localhost:8765"}
+    def _client_key(self) -> str:
+        forwarded = self.headers.get("X-Forwarded-For", "")
+        return forwarded.split(",")[-1].strip() if forwarded else self.client_address[0]
+
+    def _rate_limited(self) -> bool:
+        now = time.monotonic()
+        key = self._client_key()
+        with RATE_LOCK:
+            requests = REQUESTS[key]
+            while requests and now - requests[0] > RATE_LIMIT_WINDOW_SECONDS:
+                requests.popleft()
+            if len(requests) >= RATE_LIMIT_REQUESTS:
+                return True
+            requests.append(now)
+        return False
 
     def do_OPTIONS(self) -> None:
-        if not self._valid_host():
-            self.send_error(403, "Loopback host only")
-            return
-        origin = self.headers.get("Origin", "")
-        if origin not in self.server.allowed_origins:
-            self.send_error(403, "Origin is not allowed; restart with --origin")
+        if self.path != "/api/tts" or not self._origin_allowed():
+            self._json(403, {"error": "This origin or endpoint is not allowed."})
             return
         self.send_response(204)
         self._cors()
@@ -75,41 +111,62 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self) -> None:
-        if not self._valid_host():
-            self._json(403, {"error": "Loopback host only"})
+        if self.path == "/health":
+            self._json(200, {
+                "service": "StickMotion Cloud Voice",
+                "status": "ready",
+                "languages": {
+                    "en": {"configured": "en" in VOICE_PATHS, "loaded": "en" in VOICES},
+                    "ar": {"configured": "ar" in VOICE_PATHS, "loaded": "ar" in VOICES},
+                },
+            })
             return
-        if self.path != "/health":
-            self._json(404, {"error": "Not found"})
+        if self.path.startswith("/api/"):
+            self._json(404, {"error": "API route not found."})
             return
-        self._json(200, {
-            "service": "StickMotion Pro Voice · Piper local",
-            "languages": {
-                "en": {"configured": "en" in VOICE_PATHS, "loaded": "en" in VOICES},
-                "ar": {"configured": "ar" in VOICE_PATHS, "loaded": "ar" in VOICES},
-            },
-        })
+        super().do_GET()
 
     def do_POST(self) -> None:
-        if not self._valid_host():
-            self._json(403, {"error": "Loopback host only"})
+        if self.path != "/api/tts":
+            self._json(404, {"error": "API route not found."})
             return
-        if self.path != "/tts":
-            self._json(404, {"error": "Not found"})
+        if not self._origin_allowed():
+            self._json(403, {"error": "This origin is not allowed."})
+            return
+        if self._rate_limited():
+            self._json(429, {"error": "Voice request limit reached. Please wait a minute and try again."})
+            return
+        if not SYNTHESIS_SLOT.acquire(blocking=False):
+            self._json(429, {"error": "The voice service is busy. Please retry shortly."})
             return
         try:
-            size = int(self.headers.get("Content-Length", "0"))
-            if size <= 0 or size > 24_000:
-                self._json(413, {"error": "Request body must be between 1 and 24000 bytes."})
+            content_type = self.headers.get("Content-Type", "")
+            if "application/json" not in content_type.lower():
+                self._json(415, {"error": "Send the narration as application/json."})
+                return
+            try:
+                size = int(self.headers.get("Content-Length", "0"))
+            except ValueError:
+                size = 0
+            if size <= 0 or size > MAX_BODY_BYTES:
+                self._json(413, {"error": "Request body is too large or empty."})
                 return
             request = json.loads(self.rfile.read(size))
+            if not isinstance(request, dict):
+                self._json(400, {"error": "Request must be a JSON object."})
+                return
             text = request.get("text", "")
             language = request.get("language", "")
+            style = request.get("style", "documentary")
             rate = float(request.get("rate", 1.0))
             if not isinstance(text, str) or not text.strip() or len(text) > MAX_TEXT_LENGTH:
-                self._json(400, {"error": "Text must contain 1–5000 characters."})
+                self._json(400, {"error": f"Text must contain 1–{MAX_TEXT_LENGTH} characters."})
                 return
             if language not in {"en", "ar"}:
                 self._json(400, {"error": "Language must be en or ar."})
+                return
+            if style not in STYLE_CONFIG:
+                self._json(400, {"error": "Style must be documentary, energetic, or calm."})
                 return
             if not math.isfinite(rate) or rate < 0.7 or rate > 1.3:
                 self._json(400, {"error": "Rate must be between 0.7 and 1.3."})
@@ -120,7 +177,10 @@ class Handler(BaseHTTPRequestHandler):
                 voice.synthesize_wav(
                     text.strip(),
                     wav_file,
-                    syn_config=SynthesisConfig(length_scale=1.0 / rate),
+                    syn_config=SynthesisConfig(
+                        length_scale=1.0 / rate,
+                        **STYLE_CONFIG[style],
+                    ),
                 )
             wav = audio.getvalue()
             self.send_response(200)
@@ -131,44 +191,50 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(wav)
         except FileNotFoundError as error:
-            self._json(409, {"error": str(error)})
+            self._json(503, {"error": str(error)})
         except (ValueError, TypeError, json.JSONDecodeError) as error:
             self._json(400, {"error": f"Invalid request: {error}"})
         except Exception:
             logging.exception("Piper synthesis failed")
-            self._json(500, {"error": "Piper synthesis failed. Check the local server console."})
+            self._json(500, {"error": "Voice generation failed. Please retry shortly."})
+        finally:
+            SYNTHESIS_SLOT.release()
 
     def log_message(self, fmt: str, *args: Any) -> None:
         logging.info("%s - %s", self.address_string(), fmt % args)
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Local Piper TTS bridge for StickMotion AI")
-    parser.add_argument("--english-model", type=Path, help="Path to an English Piper .onnx voice model")
-    parser.add_argument("--arabic-model", type=Path, help="Path to an Arabic Piper .onnx voice model")
-    parser.add_argument("--origin", action="append", default=[], help="Allowed web app origin; may be repeated")
-    args = parser.parse_args()
+    for language, variable, default in (
+        ("en", "PIPER_EN_MODEL", "voices/en_US-ryan-medium.onnx"),
+        ("ar", "PIPER_AR_MODEL", "voices/ar_JO-kareem-medium.onnx"),
+    ):
+        configured = os.environ.get(variable, default)
+        path = Path(configured).expanduser()
+        if path.is_file():
+            VOICE_PATHS[language] = path.resolve()
 
-    for language, path in (("en", args.english_model), ("ar", args.arabic_model)):
-        if path:
-            VOICE_PATHS[language] = path.expanduser().resolve()
-            if not VOICE_PATHS[language].is_file():
-                parser.error(f"Model file does not exist: {VOICE_PATHS[language]}")
-
-    if not VOICE_PATHS:
-        parser.error("Provide at least one model using --english-model and/or --arabic-model.")
-
-    allowed_origins = set(args.origin or ["http://localhost:5173", "http://127.0.0.1:5173"])
-    server = ThreadingHTTPServer(("127.0.0.1", 8765), Handler)
+    allowed_origins = {
+        origin.strip()
+        for origin in os.environ.get(
+            "ALLOWED_ORIGINS",
+            "http://localhost:5173,http://127.0.0.1:5173",
+        ).split(",")
+        if origin.strip()
+    }
+    host = os.environ.get("HOST", "0.0.0.0")
+    port = int(os.environ.get("PORT", "8765"))
+    server = ThreadingHTTPServer((host, port), Handler)
+    server.daemon_threads = True
     server.allowed_origins = allowed_origins
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    logging.info("StickMotion Piper bridge listening on http://127.0.0.1:8765")
-    logging.info("Allowed origins: %s", ", ".join(sorted(allowed_origins)))
-    logging.info("Configured languages: %s", ", ".join(sorted(VOICE_PATHS)))
+    logging.info("StickMotion Cloud Voice listening on %s:%s", host, port)
+    logging.info("Static app directory: %s", os.environ.get("WEB_DIST_DIR", "dist"))
+    logging.info("Configured voice languages: %s", ", ".join(sorted(VOICE_PATHS)) or "none")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        logging.info("Stopping local voice service")
+        logging.info("Stopping StickMotion Cloud Voice")
     finally:
         server.server_close()
 
