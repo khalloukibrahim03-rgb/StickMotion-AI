@@ -72,7 +72,7 @@ npm run build
 
 ## Validation status
 
-GitHub Actions is configured to install dependencies, run TypeScript checks, and create a production build on pushes and pull requests. The latest confirmed CI run on the previous commit passed unit tests, TypeScript, Python syntax validation, and production build. The cloud voice and deployment changes are now committed and their new workflow run must pass before release. Local dependency installation and GitHub cloning were blocked by network/DNS restrictions in the current execution environment.
+GitHub Actions is configured to install dependencies, run TypeScript checks, and create a production build on pushes and pull requests. GitHub Actions run 311 passed unit tests, TypeScript, Python syntax validation, and the Vite production build for commit `88aeb3a`. The Docker image itself has not yet been built in CI, and the cloud voice service has not yet been deployed or tested end-to-end. Treat the app as a deployment candidate, not a released production service, until those checks pass. Local dependency installation and GitHub cloning were blocked by network/DNS restrictions in the current execution environment.
 
 ## Current limitations
 
