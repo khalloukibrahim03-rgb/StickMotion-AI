@@ -1,6 +1,7 @@
 services:
   - type: web
     name: stickmotion-ai
+    branch: development
     runtime: docker
     plan: free
     dockerfilePath: ./Dockerfile
