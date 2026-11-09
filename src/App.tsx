@@ -9,6 +9,7 @@ import CameraAnimator from "./engine/CameraAnimator";
 import EnvironmentStage from "./engine/EnvironmentStage";
 import SceneProps from "./engine/SceneProps";
 import { buildStoryboard } from "./core/storyboard";
+import { createNarrationSubtitleCues } from "./core/narration";
 import { createTopicScript } from "./core/topic-script";
 import { buildRenderSchedule, evaluateRenderFrame, getFadeInOpacity, getRenderFileExtension, getRenderMimeType } from "./core/render";
 import { getCenterCropRect, getYouTubeExportProfile, type YouTubeFormat, type YouTubeFrameRate } from "./core/youtube";
@@ -354,7 +355,10 @@ export default function App() {
     const productionText = topicScript?.script ?? story;
     if (topicScript) setStory(productionText);
     const scenes = buildStoryboard(productionText);
-    scenes.forEach((scene) => { scene.narrationText = scene.description; });
+    scenes.forEach((scene) => {
+      scene.narrationText = scene.description;
+      scene.subtitles = createNarrationSubtitleCues(scene.narrationText, scene.durationSeconds);
+    });
     if (!scenes.length) {
       setMessage("Enter a topic or story first, then build scenes");
       return;
