@@ -120,12 +120,17 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self) -> None:
         if self.path == "/health":
-            self._json(200, {
+            configured = {
+                "en": "en" in VOICE_PATHS,
+                "ar": "ar" in VOICE_PATHS,
+            }
+            ready = all(configured.values())
+            self._json(200 if ready else 503, {
                 "service": "StickMotion Cloud Voice",
-                "status": "ready",
+                "status": "ready" if ready else "missing_voice_models",
                 "languages": {
-                    "en": {"configured": "en" in VOICE_PATHS, "loaded": LOADED_LANGUAGE == "en"},
-                    "ar": {"configured": "ar" in VOICE_PATHS, "loaded": LOADED_LANGUAGE == "ar"},
+                    "en": {"configured": configured["en"], "loaded": LOADED_LANGUAGE == "en"},
+                    "ar": {"configured": configured["ar"], "loaded": LOADED_LANGUAGE == "ar"},
                 },
             })
             return
