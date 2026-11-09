@@ -219,7 +219,7 @@ class Handler(SimpleHTTPRequestHandler):
 
 def main() -> None:
     for language, variable, default in (
-        ("en", "PIPER_EN_MODEL", "voices/en_US-ryan-medium.onnx"),
+        ("en", "PIPER_EN_MODEL", "voices/en_US-kusal-medium.onnx"),
         ("ar", "PIPER_AR_MODEL", "voices/ar_JO-kareem-medium.onnx"),
     ):
         configured = os.environ.get(variable, default)
