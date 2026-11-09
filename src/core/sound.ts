@@ -169,3 +169,27 @@ export function getCrossedSoundEvents(sounds: SceneSound[], fromSeconds: number,
   return sounds.filter((cue) => (cue.atSeconds > fromSeconds || (fromSeconds === 0 && cue.atSeconds === 0)) && cue.atSeconds <= toSeconds)
     .sort((a, b) => a.atSeconds - b.atSeconds);
 }
+
+
+/** Decode a user-supplied narration recording for playback and video export. */
+export async function decodeNarrationAudio(blob: Blob): Promise<AudioBuffer> {
+  const context = getAudioContext();
+  if (!context) throw new Error("Web Audio is not supported in this browser.");
+  const bytes = await blob.arrayBuffer();
+  return context.decodeAudioData(bytes);
+}
+
+/** Play a recorded voice-over through speakers and the active video-capture mix. */
+export function playNarrationAudio(buffer: AudioBuffer, volume = 1): AudioBufferSourceNode | null {
+  const context = getAudioContext();
+  if (!context || context.state !== "running") return null;
+  const source = context.createBufferSource();
+  const gain = context.createGain();
+  gain.gain.value = Math.min(1, Math.max(0, volume));
+  source.buffer = buffer;
+  source.connect(gain);
+  gain.connect(context.destination);
+  if (captureDestination) gain.connect(captureDestination);
+  source.start();
+  return source;
+}
