@@ -145,7 +145,9 @@ The editor now displays scene segments with separate **Captions**, **SFX**, **Po
 - Recordings are stored separately from the JSON project in the browser IndexedDB database and remain local to that browser/device.
 - Preview each imported recording before export. During video rendering, the recording starts at the beginning of its scene and is mixed into the captured audio stream alongside natural sound effects.
 - The built-in SpeechSynthesis voice remains a basic system-voice test; it is not studio-quality and is not part of the final export.
-- Automatic AI voice generation is not included yet. A genuinely high-quality generated voice requires a suitable model/provider; the product will not silently depend on a paid API.
+- Optional local AI narration is now connected through Piper TTS: configure Arabic and/or English ONNX voice models, run the loopback-only Python bridge in `tools/piper-voice/server.py`, and generate a real WAV recording per scene. Generated audio is stored in IndexedDB and mixed into video export.
+- The local Piper setup is optional and requires a one-time Python package/model download. No cloud account or paid API is required. Setup instructions: [tools/piper-voice/README.md](tools/piper-voice/README.md).
+- The browser SpeechSynthesis test remains separate from Piper-generated WAV output. Browser voice profiles do not pretend to create studio recordings.
 - No background music, instrumental tracks, or music beds are added.
 
 
