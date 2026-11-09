@@ -283,7 +283,7 @@ export default function App() {
       setMessage("Add narration text or subtitles to this scene before generating speech");
       return;
     }
-    const language = /[\\u0600-\\u06FF]/u.test(text) ? "ar" : "en";
+    const language = /[\u0600-\u06FF]/u.test(text) ? "ar" : "en";
     setVoiceGenerating(true);
     try {
       const response = await fetch("/api/tts", {
