@@ -10,6 +10,7 @@ import argparse
 import io
 import json
 import logging
+import wave
 import math
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -115,11 +116,12 @@ class Handler(BaseHTTPRequestHandler):
                 return
             voice = load_voice(language)
             audio = io.BytesIO()
-            voice.synthesize_wav(
-                text.strip(),
-                audio,
-                syn_config=SynthesisConfig(length_scale=1.0 / rate),
-            )
+            with wave.open(audio, "wb") as wav_file:
+                voice.synthesize_wav(
+                    text.strip(),
+                    wav_file,
+                    syn_config=SynthesisConfig(length_scale=1.0 / rate),
+                )
             wav = audio.getvalue()
             self.send_response(200)
             self._cors()
