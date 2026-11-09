@@ -18,13 +18,13 @@ The `development` branch is the active engineering branch. The active editor she
 - `src/core/model.ts` — strict runtime validation for imported project files and their scenes, transforms, keyframes, and sound cues.
 - `src/core/model.test.ts` — project import validation tests.
 - `src/core/sound.ts` — local Web Audio synthesis and scene-local sound cue scheduling.
-- Scene narration — editable per-scene narration text with browser SpeechSynthesis voice preview, automatic Arabic/English language detection, voice selection, and speaking-rate control. This preview is not yet captured or muxed into exported video.
+- Scene narration — editable per-scene narration text with browser SpeechSynthesis voice preview, automatic Arabic/English language detection, voice selection, and speaking-rate control. Imported per-scene voice-over recordings are decoded with Web Audio, previewable, and mixed into exported video at each scene start. Browser SpeechSynthesis remains an optional basic test voice only.
 - `src/core/narration.ts` — creates editable, word-count-timed subtitle cues from scene narration in English or Arabic; timings are estimates and can be refined in the subtitle editor.
 - `src/core/subtitles.ts` — SRT/WebVTT parsing and project-wide serialization with scene-duration offsets; captions crossing scene boundaries are split into scene-local cues.
 - `src/core/subtitles.test.ts` — subtitle import/export tests covering timestamps, Arabic text, scene offsets, sorting, splitting, and empty projects.
 - `src/core/sound.test.ts` — sound cue crossing, time-zero, chronological ordering, and backward-seek tests.
 - `src/core/playback.ts` — external animation clock so Three.js can read playback time without forcing a full React editor render on every frame.
-- `src/core/storage.ts` — IndexedDB project repository with save, load, list, and delete operations.
+- `src/core/storage.ts` — IndexedDB project repository plus separately stored per-scene narration audio (up to 40 MB per recording).
 - Project transfer — import and export versioned `.stickmotion.json` files from the editor.
 - Subtitle editing — edit caption text and scene-local start/end times, preview cues, import `.srt`/`.vtt` files into scenes, and export project-wide `.srt` or `.vtt` files.
 
@@ -76,7 +76,7 @@ GitHub Actions is configured to install dependencies, run TypeScript checks, and
 
 ## Current limitations
 
-The application is not yet a production release. The prompt planner is rule-based rather than generative AI: it recognizes common English and Arabic action phrases, builds editable scene beats, suggests camera moves, and adds natural sound cues. The character supports procedural motions and editable full-body pose keyframes for both arms, both legs, and the root transform, with linear and eased interpolation. Scene-local natural sound cues can be previewed, edited, and triggered during forward timeline playback. Projects can be saved locally and transferred as validated JSON files. Camera keyframes now animate the live preview while playing; pause playback to orbit the camera manually and capture a new keyframe. Muxing subtitle/audio tracks into the final video, and complete MP4 export are still under development. These limitations will be removed milestone by milestone and verified before release.
+The application is not yet a production release. The prompt planner is rule-based rather than generative AI: it recognizes common English and Arabic action phrases, builds editable scene beats, suggests camera moves, and adds natural sound cues. The character supports procedural motions and editable full-body pose keyframes for both arms, both legs, and the root transform, with linear and eased interpolation. Scene-local natural sound cues can be previewed, edited, and triggered during forward timeline playback. Projects can be saved locally and transferred as validated JSON files. Camera keyframes now animate the live preview while playing; pause playback to orbit the camera manually and capture a new keyframe. Advanced audio-track editing, automatic AI voice generation, and complete MP4 export are still under development. These limitations will be removed milestone by milestone and verified before release.
 
 ## Roadmap
 
@@ -137,3 +137,13 @@ The editor now displays scene segments with separate **Captions**, **SFX**, **Po
 - Attached assets are stored with their source URL, media URL, license/credit metadata, and scene-local in/out times. They appear as scene cutaways in preview and are composited into the rendered export.
 - This first media provider is free and requires no API key. A listed Commons license is not a blanket permission for every use: creators must open the source page and comply with the individual license and attribution requirements.
 - This is media discovery and deterministic storyboard assembly, not generative AI video synthesis. Automatic script writing, voice narration, advanced cutaway editing, and more providers remain future milestones.
+
+
+## Recorded pro voice-over
+
+- Import a studio-recorded Arabic or English voice-over for each scene (MP3/WAV/M4A/OGG; browser decoder support varies; maximum 40 MB per scene).
+- Recordings are stored separately from the JSON project in the browser IndexedDB database and remain local to that browser/device.
+- Preview each imported recording before export. During video rendering, the recording starts at the beginning of its scene and is mixed into the captured audio stream alongside natural sound effects.
+- The built-in SpeechSynthesis voice remains a basic system-voice test; it is not studio-quality and is not part of the final export.
+- Automatic AI voice generation is not included yet. A genuinely high-quality generated voice requires a suitable model/provider; the product will not silently depend on a paid API.
+- No background music, instrumental tracks, or music beds are added.
