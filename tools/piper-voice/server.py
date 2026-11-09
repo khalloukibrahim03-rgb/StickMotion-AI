@@ -22,8 +22,8 @@ from typing import Any
 
 from piper import PiperVoice, SynthesisConfig
 
-MAX_TEXT_LENGTH = 2500
-MAX_BODY_BYTES = 16_000
+MAX_TEXT_LENGTH = 4000
+MAX_BODY_BYTES = 20_000
 RATE_LIMIT_REQUESTS = 10
 RATE_LIMIT_WINDOW_SECONDS = 60
 VOICE_PATHS: dict[str, Path] = {}
