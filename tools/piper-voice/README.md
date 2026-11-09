@@ -1,59 +1,58 @@
-# Local Piper voice setup (Windows)
+# StickMotion Cloud Voice service
 
-StickMotion AI can generate real scene narration WAV files through Piper running locally on your computer. The browser app does not download voice models automatically and does not send scripts to a cloud TTS provider.
+This folder contains the server-side Piper adapter. It is not an end-user installation guide. Visitors use the hosted StickMotion app and never install Python, Piper, or download voice models to a phone or computer.
 
-## 1. Install Piper
+## Production container
 
-Open PowerShell in the repository folder:
+The repository-root `Dockerfile`:
 
-```powershell
-py -3 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install piper-tts
+1. Builds the React/Vite editor into `dist/`.
+2. Installs the pinned `piper-tts` server dependency.
+3. Downloads the English `en_US-ryan-medium` and Arabic `ar_JO-kareem-medium` ONNX models during the container image build.
+4. Starts this server, which serves the editor and the same-origin `POST /api/tts` endpoint.
+
+The default model paths are:
+
+- `/app/voices/en_US-ryan-medium.onnx`
+- `/app/voices/ar_JO-kareem-medium.onnx`
+
+Override them with `PIPER_EN_MODEL` and `PIPER_AR_MODEL` if the image layout changes. The server listens on `0.0.0.0:$PORT` and serves static files from `WEB_DIST_DIR`.
+
+## API contract
+
+`POST /api/tts`
+
+Request JSON:
+
+```json
+{
+  "text": "Welcome to StickMotion AI.",
+  "language": "en",
+  "rate": 0.95,
+  "style": "documentary"
+}
 ```
 
-If PowerShell blocks activation, use `.venv\Scripts\python.exe` instead of activating the environment.
+- `language`: `en` or `ar`.
+- `rate`: 0.7–1.3.
+- `style`: `documentary`, `energetic`, or `calm`.
+- Success: `audio/wav`.
+- `GET /health`: service readiness and configured/loaded language flags.
 
-## 2. Download voice models (optional, one-time)
+The service caps text length and request size, applies a per-client request limit, and allows one synthesis at a time. Same-origin production requests need no browser API key. The browser endpoint is not a secret; do not add a private API key to a `VITE_*` variable.
 
-Create a model folder and download one voice for each language you plan to use:
+## Developer workflow
 
-```powershell
-New-Item -ItemType Directory -Force tools\piper-voice\voices
-Set-Location tools\piper-voice\voices
-python -m piper.download_voices en_US-ryan-medium
-python -m piper.download_voices ar_JO-kareem-medium
-Set-Location ..\..\..
+For local development, install the requirements in a Python environment, place the two licensed ONNX models in `voices/`, start:
+
+```bash
+PORT=8765 python tools/piper-voice/server.py
 ```
 
-The model files are large (roughly 60 MB each for these medium models). Download only the language you need. Voice models have their own model cards and licensing terms; review them before publishing commercial videos.
+Then run `npm run dev`. Vite proxies `/api` and `/health` to the local Python process. This developer-only setup is not required by app users.
 
-## 3. Start the local bridge
+## Hosting and license notes
 
-From the repository root, with the virtual environment active:
+The Render Blueprint requests a Free web service. Free instances may sleep while idle, and their memory limit may not be sufficient for both medium-sized voices. Verify container build, model loading, peak memory, and concurrent request behavior before release. Do not upgrade to a paid plan without explicit owner approval.
 
-```powershell
-python tools\piper-voice\server.py --english-model tools\piper-voice\voices\en_US-ryan-medium.onnx --arabic-model tools\piper-voice\voices\ar_JO-kareem-medium.onnx
-```
-
-You can provide only one model if you only need one language. The service listens on `127.0.0.1:8765` and is not exposed to your network.
-
-By default, only local Vite origins `http://localhost:5173` and `http://127.0.0.1:5173` are allowed. If you run the app from another trusted origin, add it explicitly with `--origin https://your-app.example`. Do not add origins you do not control.
-
-## 4. Generate a scene voice-over
-
-1. Start StickMotion AI in the browser.
-2. Open a scene and enter Arabic or English text in **Script / Narration Text** (or add subtitles).
-3. In **StickMotion Pro Voice**, click **Generate scene voice-over with Piper**.
-4. The generated WAV is saved locally to that scene, can be previewed, and is included in video export with the scene audio mix.
-5. Repeat for each scene that needs narration.
-
-## Privacy and limitations
-
-- Text is sent only to the Piper process on your own computer; the bridge does not call a cloud API.
-- Models are downloaded only when you run the download command.
-- Piper currently offers a Jordanian Arabic model and multiple English models. The selected Arabic and English models may not sound like the exact same person.
-- The browser pitch control affects only the browser voice preview. Piper speed is applied during WAV generation; pitch shifting is not yet supported by this bridge.
-- This is a free local TTS workflow, but model quality and speed depend on the chosen voice and computer.
-- The app intentionally adds no background music.
+Piper and each downloaded voice model have separate licenses and model cards. Review both model licenses and attribution/redistribution requirements before commercial use. The selected voices are not a custom-trained proprietary voice identity.
