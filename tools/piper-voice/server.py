@@ -36,6 +36,8 @@ REQUESTS: dict[str, deque[float]] = defaultdict(deque)
 SYNTHESIS_SLOT = BoundedSemaphore(1)
 STYLE_CONFIG = {
     "documentary": {"noise_scale": 0.667, "noise_w_scale": 0.8},
+    "cinematic": {"noise_scale": 0.55, "noise_w_scale": 0.7},
+
     "energetic": {"noise_scale": 0.8, "noise_w_scale": 0.9},
     "calm": {"noise_scale": 0.55, "noise_w_scale": 0.7},
 }
@@ -219,7 +221,7 @@ class Handler(SimpleHTTPRequestHandler):
 
 def main() -> None:
     for language, variable, default in (
-        ("en", "PIPER_EN_MODEL", "voices/en_US-kusal-medium.onnx"),
+        ("en", "PIPER_EN_MODEL", "voices/en_GB-alan-medium.onnx"),
         ("ar", "PIPER_AR_MODEL", "voices/ar_JO-kareem-medium.onnx"),
     ):
         configured = os.environ.get(variable, default)
