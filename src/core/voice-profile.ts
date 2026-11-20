@@ -1,7 +1,7 @@
 /** StickMotion Pro Voice profile presets. These tune only the browser test voice;
  * they do not synthesize or export a studio-quality recording.
  */
-export type VoiceStyle = "documentary" | "energetic" | "calm";
+export type VoiceStyle = "documentary" | "cinematic" | "energetic" | "calm";
 
 export interface VoiceStyleProfile {
   id: VoiceStyle;
@@ -18,6 +18,13 @@ export const VOICE_STYLE_PROFILES: Record<VoiceStyle, VoiceStyleProfile> = {
     description: "Warm, steady delivery for science and discovery stories.",
     rate: 0.95,
     pitch: 0.92,
+  },
+  cinematic: {
+    id: "cinematic",
+    label: "Deep Cinematic",
+    description: "Measured, restrained delivery tuned for the British male Alan voice in science documentaries.",
+    rate: 0.88,
+    pitch: 0.82,
   },
   energetic: {
     id: "energetic",
@@ -40,5 +47,5 @@ export function getVoiceStyleProfile(style: VoiceStyle): VoiceStyleProfile {
 }
 
 export function isVoiceStyle(value: unknown): value is VoiceStyle {
-  return value === "documentary" || value === "energetic" || value === "calm";
+  return value === "documentary" || value === "cinematic" || value === "energetic" || value === "calm";
 }
