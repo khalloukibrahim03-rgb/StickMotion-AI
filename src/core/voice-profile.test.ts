@@ -9,6 +9,12 @@ describe("StickMotion Pro Voice style profiles", () => {
     expect(profile.pitch).toBeLessThan(1);
   });
 
+  it("provides a deep cinematic preset with measured pacing", () => {
+    const profile = getVoiceStyleProfile("cinematic");
+    expect(profile.label).toBe("Deep Cinematic");
+    expect(profile.rate).toBeLessThan(0.9);
+  });
+
   it("keeps every preset within supported speech synthesis ranges", () => {
     for (const profile of Object.values(VOICE_STYLE_PROFILES)) {
       expect(profile.rate).toBeGreaterThanOrEqual(0.5);
@@ -20,6 +26,7 @@ describe("StickMotion Pro Voice style profiles", () => {
 
   it("rejects unknown profile identifiers", () => {
     expect(isVoiceStyle("calm")).toBe(true);
+    expect(isVoiceStyle("cinematic")).toBe(true);
     expect(isVoiceStyle("premium-ai")).toBe(false);
   });
 });
