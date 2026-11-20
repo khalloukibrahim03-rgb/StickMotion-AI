@@ -1,5 +1,5 @@
-/** StickMotion Pro Voice profile presets. These tune only the browser test voice;
- * they do not synthesize or export a studio-quality recording.
+/** Voice presets tune the browser preview and hosted Piper synthesis pacing/style.
+ * The selected server-side model determines the spoken voice identity and accent.
  */
 export type VoiceStyle = "documentary" | "cinematic" | "energetic" | "calm";
 
