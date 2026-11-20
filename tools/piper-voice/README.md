@@ -8,12 +8,12 @@ The repository-root `Dockerfile`:
 
 1. Builds the React/Vite editor into `dist/`.
 2. Installs the pinned `piper-tts` server dependency.
-3. Downloads the English `en_US-kusal-medium` and Arabic `ar_JO-kareem-medium` ONNX models during the container image build.
+3. Downloads the British male English `en_GB-alan-medium` and Arabic `ar_JO-kareem-medium` ONNX models during the container image build.
 4. Starts this server, which serves the editor and the same-origin `POST /api/tts` endpoint.
 
 The default model paths are:
 
-- `/app/voices/en_US-kusal-medium.onnx`
+- `/app/voices/en_GB-alan-medium.onnx`
 - `/app/voices/ar_JO-kareem-medium.onnx`
 
 Override them with `PIPER_EN_MODEL` and `PIPER_AR_MODEL` if the image layout changes. The server listens on `0.0.0.0:$PORT` and serves static files from `WEB_DIST_DIR`.
@@ -28,14 +28,14 @@ Request JSON:
 {
   "text": "Welcome to StickMotion AI.",
   "language": "en",
-  "rate": 0.95,
+  "rate": 0.88,
   "style": "documentary"
 }
 ```
 
 - `language`: `en` or `ar`.
 - `rate`: 0.7–1.3.
-- `style`: `documentary`, `energetic`, or `calm`.
+- `style`: `cinematic`, `documentary`, `energetic`, or `calm`. The cinematic profile uses slower pacing and restrained synthesis settings; the British male Alan model supplies the accent and voice identity.
 - Success: `audio/wav`.
 - `GET /health`: service readiness and configured/loaded language flags.
 
