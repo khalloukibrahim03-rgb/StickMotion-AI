@@ -43,7 +43,7 @@ export default function App() {
   const [selectedVoiceURI, setSelectedVoiceURI] = useState("");
   const [narrationStyle, setNarrationStyle] = useState<VoiceStyle>("cinematic");
   const [narrationRate, setNarrationRate] = useState(0.88);
-  const [narrationPitch, setNarrationPitch] = useState(0.92);
+  const [narrationPitch, setNarrationPitch] = useState(0.82);
   const [narrationVolume, setNarrationVolume] = useState(1);
   const [narrationAudioInfo, setNarrationAudioInfo] = useState<{ name: string; type: string } | null>(null);
   const [narrationAudioUrl, setNarrationAudioUrl] = useState("");
